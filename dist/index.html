@@ -1,124 +1,14 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Monitor de Nível da Caixa D'água</title>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-  <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
-  <link rel="stylesheet" href="assets/style.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>💧</text></svg>">
-</head>
-<body>
-  <header class="navbar glass">
-    <div class="brand">
-      <span class="logo">💧</span>
-      <h1>Monitor de Nível da Caixa D'água</h1>
-    </div>
-    <div class="status-pill" id="conn-pill">
-      <span class="dot" id="conn-dot"></span>
-      <span id="conn-text">Conectando…</span>
-    </div>
-  </header>
-
-  <main class="container">
-    <section class="panel glass hero">
-      <div class="tank-wrap">
-        <!-- Desenho do reservatório (SVG) -->
-        <svg id="tank" viewBox="0 0 160 260" aria-label="Tanque de água">
-          <defs>
-            <linearGradient id="waterGrad" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stop-opacity="0.8"/>
-              <stop offset="100%" stop-opacity="1"/>
-            </linearGradient>
-            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.25"/>
-            </filter>
-          </defs>
-          <!-- Corpo do tanque -->
-          <rect x="30" y="20" width="100" height="200" rx="8" ry="8" class="tank-body" filter="url(#shadow)"/>
-          <!-- Água -->
-          <clipPath id="tankClip">
-            <rect x="30" y="20" width="100" height="200" rx="8" ry="8"/>
-          </clipPath>
-          <g clip-path="url(#tankClip)">
-            <rect id="water" x="30" y="220" width="100" height="0" class="water"/>
-            <!-- ondinha -->
-            <path id="wave" d="M 30 220 Q 55 210, 80 220 T 130 220 V 220 H 30 Z" class="wave"/>
-          </g>
-          <!-- base -->
-          <rect x="40" y="230" width="80" height="12" rx="6" class="tank-base"/>
-          <!-- marcações -->
-          <g class="ticks" font-size="10" fill="currentColor" opacity=".5">
-            <text x="135" y="36">100</text>
-            <text x="135" y="76">80</text>
-            <text x="135" y="116">60</text>
-            <text x="135" y="156">40</text>
-            <text x="135" y="196">20</text>
-          </g>
-        </svg>
-      </div>
-
-      <div class="summary">
-        <div class="big-percent" id="percent">--%</div>
-
-        <div class="card-lg gradient">
-          <div class="card-title">💧 Volume de Água</div>
-          <div class="big-value"><span id="volume">--</span> <small>litros</small></div>
-        </div>
-
-        <div class="kv">
-          <div class="kv-row">
-            <span>Nível Atual:</span><strong id="nivel">-- cm</strong>
-          </div>
-          <div class="kv-row">
-            <span>Capacidade Total:</span><strong id="capacidade">-- L</strong>
-          </div>
-          <div class="kv-row">
-            <span>Distância Sensor:</span><strong id="distancia">-- cm</strong>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="cards">
-      <div class="info-card ok" id="status-card">
-        <div class="icn">🌊</div>
-        <div>
-          <div class="label">Status do Nível</div>
-          <div class="value" id="status">–</div>
-        </div>
-      </div>
-
-      <div class="info-card warn" id="alert-card">
-        <div class="icn">⚠️</div>
-        <div>
-          <div class="label">Alertas</div>
-          <div class="value" id="alerta">–</div>
-        </div>
-      </div>
-
-      <div class="info-card" id="last-card">
-        <div class="icn">⏱️</div>
-        <div>
-          <div class="label">Última Atualização</div>
-          <div class="value" id="updated">–</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="panel glass">
-      <h2>Histórico Recente</h2>
-      <canvas id="chart" height="120"></canvas>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <div>Feito para o Vicente • Atualiza automaticamente</div>
-  </footer>
-
-  <!-- Lib de gráfico -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="assets/script.js"></script>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monitor de Água - Dashboard</title>
+    <script type="module" crossorigin src="/assets/index-CwOyvhrk.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DJhb0fi0.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>
