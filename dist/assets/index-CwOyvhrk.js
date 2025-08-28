@@ -1,73 +1,117 @@
-// Arquivo reorganizado e indentado do bundle React (index-CwOyvhrk.js)
-// Observação: este arquivo foi gerado pelo build (provavelmente Vite/React).
-// O código original JSX foi transformado em JavaScript ofuscado/minificado.
-// Aqui está a versão expandida, indentada e comentada para facilitar a edição.
+/*
+======================================================
+   Monitor de Consumo de Água - Script Principal
+   Arquivo: index-CwOyvhrk.js
+   Função: Controla a interface web e atualiza gráficos
+======================================================
+*/
 
-// ============================================================================
-// IMPORTAÇÕES DE REACT E OUTRAS BIBLIOTECAS
-// ============================================================================
-import React from "react";
-import ReactDOM from "react-dom/client";
+// ==========================
+// Variáveis globais
+// ==========================
+const apiUrl = "/api/dados"; // Endpoint para buscar dados do servidor Flask
+const historicoUrl = "/api/historico"; // Endpoint para histórico
+let chart = null; // Gráfico principal
 
-// ============================================================================
-// COMPONENTES PRINCIPAIS
-// ============================================================================
-// A aplicação principal é montada dentro do <div id="root"></div> no index.html
+// ==========================
+// Função: Buscar último dado
+// ==========================
+async function fetchUltimoDado() {
+  try {
+    const response = await fetch(apiUrl);
+    const data = await response.json();
 
-function App() {
-  return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
-      {/* Cabeçalho */}
-      <header className="mb-6 text-center">
-        <h1 className="text-2xl font-bold text-blue-600">
-          {/* TEXTO EDITÁVEL: Título principal */}
-          Monitor de Água - Dashboard
-        </h1>
-        <p className="text-gray-600">
-          {/* TEXTO EDITÁVEL: Subtítulo */}
-          Acompanhe em tempo real o nível de água do reservatório.
-        </p>
-      </header>
-
-      {/* Área de dados principais */}
-      <main className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl">
-        <section className="bg-white shadow rounded-lg p-4">
-          <h2 className="text-lg font-semibold mb-2">
-            {/* TEXTO EDITÁVEL */}
-            Nível Atual
-          </h2>
-          <p className="text-4xl font-bold text-blue-700">
-            {/* Aqui o valor será atualizado pelo JS */}
-            75 cm
-          </p>
-        </section>
-
-        <section className="bg-white shadow rounded-lg p-4">
-          <h2 className="text-lg font-semibold mb-2">
-            {/* TEXTO EDITÁVEL */}
-            Histórico de Consumo
-          </h2>
-          <div id="chart-area">
-            {/* Gráfico renderizado via biblioteca JS (ex.: Chart.js ou Recharts) */}
-          </div>
-        </section>
-      </main>
-
-      {/* Rodapé */}
-      <footer className="mt-8 text-sm text-gray-500">
-        {/* TEXTO EDITÁVEL */}
-        &copy; 2025 Monitor de Água. Todos os direitos reservados.
-      </footer>
-    </div>
-  );
+    // Atualiza valores na tela
+    document.getElementById("nivel-agua").innerText = data.nivel + " cm";
+    document.getElementById("timestamp").innerText = data.timestamp;
+  } catch (error) {
+    console.error("Erro ao buscar último dado:", error);
+  }
 }
 
-// ============================================================================
-// RENDERIZAÇÃO DA APLICAÇÃO
-// ============================================================================
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+// ==========================
+// Função: Buscar histórico
+// ==========================
+async function fetchHistorico() {
+  try {
+    const response = await fetch(historicoUrl);
+    const historico = await response.json();
+
+    // Prepara dados para o gráfico
+    const labels = historico.map(d => d.timestamp);
+    const valores = historico.map(d => d.nivel);
+
+    renderChart(labels, valores);
+  } catch (error) {
+    console.error("Erro ao buscar histórico:", error);
+  }
+}
+
+// ==========================
+// Função: Renderizar gráfico
+// ==========================
+function renderChart(labels, data) {
+  const ctx = document.getElementById("grafico").getContext("2d");
+
+  if (chart) {
+    chart.destroy(); // Destroi gráfico antigo antes de redesenhar
+  }
+
+  chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Nível da Água (cm)",
+        data: data,
+        borderColor: "#2563eb",
+        backgroundColor: "rgba(37, 99, 235, 0.2)",
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: "#2563eb"
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          display: true,
+          labels: {
+            color: "#111827"
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: "#374151" }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: "#374151" }
+        }
+      }
+    }
+  });
+}
+
+// ==========================
+// Atualização automática
+// ==========================
+function iniciarAtualizacaoAutomatica() {
+  fetchUltimoDado();
+  fetchHistorico();
+
+  // Atualiza a cada 10 segundos
+  setInterval(() => {
+    fetchUltimoDado();
+    fetchHistorico();
+  }, 10000);
+}
+
+// ==========================
+// Inicialização
+// ==========================
+window.addEventListener("load", () => {
+  iniciarAtualizacaoAutomatica();
+});
