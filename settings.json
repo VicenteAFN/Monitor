@@ -1,1 +1,1 @@
-{"dead_zone": 5.0, "high_alert": 90, "low_alert": 20, "tank_height": 120.0, "tank_length": 100.0, "tank_volume": 1000.0, "tank_width": 100.0}
+{"dead_zone": 30.0, "high_alert": 110, "low_alert": 20, "tank_height": 1000.0, "tank_length": 200.0, "tank_volume": 10000.0, "tank_width": 200.0}
