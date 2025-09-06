@@ -1,9 +1,26 @@
 @echo off
-REM Ativa o ambiente virtual
-call venv\Scripts\activate
+echo ========================================
+echo    Monitor de Agua - Sistema Simples
+echo ========================================
+echo.
 
-REM Executa o servidor Flask
-python app.py
+echo Verificando dependencias...
+py -m pip install -r requirements.txt
 
-REM Mantém a janela aberta após a execução
+echo.
+echo ========================================
+echo         CREDENCIAIS DE ACESSO
+echo ========================================
+echo Usuario: admin
+echo Senha: admin123
+echo ========================================
+echo.
+
+echo Iniciando servidor...
+echo.
+echo Dashboard disponivel em: http://localhost:5000
+echo.
+echo Pressione Ctrl+C para parar o servidor
+echo ========================================
+py app.py
 pause

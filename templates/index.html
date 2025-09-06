@@ -1,0 +1,576 @@
+{% extends "base.html" %}
+
+{% block title %}Colina - Monitor de Água{% endblock %}
+
+{% block content %}
+<!-- Cabeçalho -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <div class="container-fluid">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-droplet-fill me-2" style="font-size: 1.5rem;"></i>
+            <div>
+                <span class="navbar-brand mb-0 h1">Monitor de Água - Condominio Colina dos Cedros</span>
+                <small class="d-block text-light opacity-75">Sistema de monitoramento em tempo real</small>
+            </div>
+        </div>
+        
+        <div class="d-flex align-items-center">
+            <span id="status-badge" class="badge bg-secondary me-3">
+                <i class="bi bi-wifi-off me-1"></i>Offline
+            </span>
+            <span id="last-update" class="text-light me-3 small">Aguardando dados...</span>
+            <div class="dropdown">
+                <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-person-circle me-1"></i>Admin
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="/logout"><i class="bi bi-box-arrow-right me-2"></i>Sair</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Conteúdo Principal -->
+<div class="container-fluid py-4">
+    <!-- Cards de Dados -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Nível de Água</h6>
+                            <h2 id="water-level" class="card-title text-primary mb-1">0%</h2>
+                            <small id="level-status" class="text-muted">Aguardando dados</small>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                            <i class="bi bi-speedometer2 text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Volume</h6>
+                            <h2 id="volume" class="card-title text-info mb-1">0 L</h2>
+                            <small id="volume-total" class="text-muted">de 40000 L total</small>
+                        </div>
+                        <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                            <i class="bi bi-droplet-fill text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Distância</h6>
+                            <h2 id="distance" class="card-title text-warning mb-1">0 cm</h2>
+                            <small class="text-muted">Sensor à superfície</small>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+                            <i class="bi bi-rulers text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Abas -->
+    <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab">
+                <i class="bi bi-speedometer2 me-2"></i>Dashboard
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
+                <i class="bi bi-graph-up me-2"></i>Histórico
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">
+                <i class="bi bi-gear me-2"></i>Configurações
+            </button>
+        </li>
+    </ul>
+    
+    <!-- Conteúdo das Abas -->
+    <div class="tab-content" id="mainTabsContent">
+        <!-- Aba Dashboard -->
+        <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
+            <div class="row">
+                <!-- Visualização do Tanque -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-transparent">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-droplet me-2"></i>Visualização do Reservatório
+                            </h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="tank-container mx-auto mb-3">
+                                <div id="water-tank" class="water-tank">
+                                    <div id="water-fill" class="water-fill">
+                                        <div class="bubble bubble-1"></div>
+                                        <div class="bubble bubble-2"></div>
+                                        <div class="bubble bubble-3"></div>
+                                    </div>
+                                    <div class="tank-markers">
+                                        <span class="marker" style="top: 10%;">100%</span>
+                                        <span class="marker" style="top: 30%;">75%</span>
+                                        <span class="marker" style="top: 50%;">50%</span>
+                                        <span class="marker" style="top: 70%;">25%</span>
+                                        <span class="marker" style="top: 90%;">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <h6 id="tank-info" class="text-muted">Reservatório de 40.000L</h6>
+                            <small id="tank-dimensions" class="text-muted">1000cm × 200cm × 200cm</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Status e Alertas -->
+                <div class="col-lg-6 mb-4">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-2 text-muted">Status do Sistema</h6>
+                                    <div id="system-status" class="d-flex align-items-center">
+                                        <div class="status-indicator bg-secondary me-2"></div>
+                                        <span>Aguardando conexão...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-2 text-muted">Alertas</h6>
+                                    <div id="alerts-container">
+                                        <div class="text-success">
+                                            <i class="bi bi-check-circle me-2"></i>Nenhum alerta
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-2 text-muted">Última Atualização</h6>
+                                    <div id="last-update-detail" class="text-muted">
+                                        Aguardando dados...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Aba Histórico -->
+        <div class="tab-pane fade" id="history" role="tabpanel">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Histórico dos Últimos 7 Dias
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="historyChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Aba Configurações -->
+        <div class="tab-pane fade" id="settings" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-6 mb-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-transparent">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-box me-2"></i>Configurações do Reservatório
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="settings-form">
+                                <div class="mb-3">
+                                    <label for="tank_height" class="form-label">Altura da Caixa (cm)</label>
+                                    <input type="number" class="form-control" id="tank_height" name="tank_height" value="1000">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="tank_width" class="form-label">Largura da Caixa (cm)</label>
+                                    <input type="number" class="form-control" id="tank_width" name="tank_width" value="200">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="tank_length" class="form-label">Comprimento da Caixa (cm)</label>
+                                    <input type="number" class="form-control" id="tank_length" name="tank_length" value="200">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="dead_zone" class="form-label">Zona Morta (cm)</label>
+                                    <input type="number" class="form-control" id="dead_zone" name="dead_zone" value="5">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="total_volume" class="form-label">Volume Total (L)</label>
+                                    <input type="number" class="form-control" id="total_volume" name="total_volume" value="40000">
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 mb-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-transparent">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-exclamation-triangle me-2"></i>Configurações de Alertas
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="low_alert_threshold" class="form-label">Alerta Nível Baixo (%)</label>
+                                <input type="number" class="form-control" id="low_alert_threshold" name="low_alert_threshold" value="20">
+                            </div>
+                            <div class="mb-3">
+                                <label for="high_alert_threshold" class="form-label">Alerta Nível Alto (%)</label>
+                                <input type="number" class="form-control" id="high_alert_threshold" name="high_alert_threshold" value="101">
+                            </div>
+                            
+                            <button type="button" class="btn btn-primary w-100" onclick="saveSettings()">
+                                <i class="bi bi-check-lg me-2"></i>Salvar Configurações
+                            </button>
+                            
+                            <div id="save-message" class="mt-3" style="display: none;"></div> 
+                            <h5>Sistema criado por: Vicente Fernandes (47)99950-2463
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Variáveis globais
+let historyChart = null;
+let currentSettings = {};
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', function() {
+    loadSettings();
+    updateData();
+    loadHistory();
+    
+    // Atualiza dados a cada 5 segundos
+    setInterval(updateData, 5000);
+});
+
+// Função para atualizar dados
+async function updateData() {
+    try {
+        const response = await fetch('/api/latest');
+        const data = await response.json();
+        
+        if (data.timestamp) {
+            updateUI(data);
+            updateStatus(true);
+        } else {
+            updateStatus(false);
+        }
+    } catch (error) {
+        console.error('Erro ao buscar dados:', error);
+        updateStatus(false);
+    }
+}
+
+// Função para atualizar interface
+function updateUI(data) {
+    // Atualiza cards principais
+    document.getElementById('water-level').textContent = data.level_percentage.toFixed(1) + '%';
+    document.getElementById('volume').textContent = Math.round(data.volume_liters) + ' L';
+    document.getElementById('distance').textContent = data.distance_cm.toFixed(1) + ' cm';
+    
+    // Atualiza status do nível
+    const levelStatus = document.getElementById('level-status');
+    if (data.level_percentage >= 70) {
+        levelStatus.textContent = 'Nível Alto';
+        levelStatus.className = 'text-success';
+    } else if (data.level_percentage >= 30) {
+        levelStatus.textContent = 'Nível Normal';
+        levelStatus.className = 'text-warning';
+    } else {
+        levelStatus.textContent = 'Nível Baixo';
+        levelStatus.className = 'text-danger';
+    }
+    
+    // Atualiza tanque visual
+    const waterFill = document.getElementById('water-fill');
+    waterFill.style.height = data.level_percentage + '%';
+    
+    // Atualiza cor do tanque baseado no nível
+    if (data.level_percentage >= 70) {
+        waterFill.style.backgroundColor = '#28a745';
+    } else if (data.level_percentage >= 30) {
+        waterFill.style.backgroundColor = '#ffc107';
+    } else {
+        waterFill.style.backgroundColor = '#dc3545';
+    }
+    
+    // Atualiza timestamp
+    const timestamp = new Date(data.timestamp).toLocaleString('pt-BR');
+    document.getElementById('last-update').textContent = timestamp;
+    document.getElementById('last-update-detail').textContent = timestamp;
+    
+    // Verifica alertas
+    updateAlerts(data);
+}
+
+// Função para atualizar status de conexão
+function updateStatus(isOnline) {
+    const statusBadge = document.getElementById('status-badge');
+    const systemStatus = document.getElementById('system-status');
+    
+    if (isOnline) {
+        statusBadge.innerHTML = '<i class="bi bi-wifi me-1"></i>Online';
+        statusBadge.className = 'badge bg-success me-3';
+        
+        systemStatus.innerHTML = `
+            <div class="status-indicator bg-success me-2"></div>
+            <span class="text-success">Sistema Online</span>
+        `;
+    } else {
+        statusBadge.innerHTML = '<i class="bi bi-wifi-off me-1"></i>Offline';
+        statusBadge.className = 'badge bg-danger me-3';
+        
+        systemStatus.innerHTML = `
+            <div class="status-indicator bg-danger me-2"></div>
+            <span class="text-danger">Sistema Offline</span>
+        `;
+    }
+}
+
+// Função para atualizar alertas
+function updateAlerts(data) {
+    const alertsContainer = document.getElementById('alerts-container');
+    const alerts = [];
+    
+    if (data.level_percentage <= currentSettings.low_alert_threshold) {
+        alerts.push({
+            type: 'danger',
+            icon: 'exclamation-triangle-fill',
+            message: 'Nível baixo detectado!'
+        });
+    }
+    
+    if (data.level_percentage >= currentSettings.high_alert_threshold) {
+        alerts.push({
+            type: 'warning',
+            icon: 'exclamation-triangle-fill',
+            message: 'Nível alto detectado!'
+        });
+    }
+    
+    if (alerts.length === 0) {
+        alertsContainer.innerHTML = `
+            <div class="text-success">
+                <i class="bi bi-check-circle me-2"></i>Nenhum alerta
+            </div>
+        `;
+    } else {
+        alertsContainer.innerHTML = alerts.map(alert => `
+            <div class="text-${alert.type} mb-2">
+                <i class="bi bi-${alert.icon} me-2"></i>${alert.message}
+            </div>
+        `).join('');
+    }
+}
+
+// Função para carregar configurações
+async function loadSettings() {
+    try {
+        const response = await fetch('/api/settings');
+        currentSettings = await response.json();
+        
+        // Atualiza formulário
+        Object.keys(currentSettings).forEach(key => {
+            const input = document.getElementById(key);
+            if (input) {
+                input.value = currentSettings[key];
+            }
+        });
+        
+        // Atualiza informações do tanque
+        updateTankInfo();
+    } catch (error) {
+        console.error('Erro ao carregar configurações:', error);
+    }
+}
+
+// Função para salvar configurações
+async function saveSettings() {
+    const form = document.getElementById('settings-form');
+    const formData = new FormData(form);
+    const settings = {};
+    
+    for (let [key, value] of formData.entries()) {
+        settings[key] = parseInt(value);
+    }
+    
+    try {
+        const response = await fetch('/api/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settings)
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            currentSettings = settings;
+            updateTankInfo();
+            showSaveMessage('Configurações salvas com sucesso!', 'success');
+        } else {
+            showSaveMessage('Erro ao salvar configurações', 'danger');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar configurações:', error);
+        showSaveMessage('Erro ao salvar configurações', 'danger');
+    }
+}
+
+// Função para mostrar mensagem de salvamento
+function showSaveMessage(message, type) {
+    const messageDiv = document.getElementById('save-message');
+    messageDiv.innerHTML = `
+        <div class="alert alert-${type}" role="alert">
+            ${message}
+        </div>
+    `;
+    messageDiv.style.display = 'block';
+    
+    setTimeout(() => {
+        messageDiv.style.display = 'none';
+    }, 3000);
+}
+
+// Função para atualizar informações do tanque
+function updateTankInfo() {
+    document.getElementById('tank-info').textContent = `Reservatório de ${currentSettings.total_volume}L`;
+    document.getElementById('tank-dimensions').textContent = 
+        `${currentSettings.tank_height}cm × ${currentSettings.tank_width}cm × ${currentSettings.tank_length}cm`;
+    document.getElementById('volume-total').textContent = `de ${currentSettings.total_volume} L total`;
+}
+
+// Função para carregar histórico
+async function loadHistory() {
+    try {
+        const response = await fetch('/api/history?days=7');
+        const historyData = await response.json();
+        
+        if (historyData.length > 0) {
+            createHistoryChart(historyData);
+        }
+    } catch (error) {
+        console.error('Erro ao carregar histórico:', error);
+    }
+}
+
+// Função para criar gráfico de histórico
+function createHistoryChart(data) {
+    const ctx = document.getElementById('historyChart').getContext('2d');
+    
+    // Prepara dados para o gráfico
+    const chartData = data.reverse().map(item => ({
+        x: new Date(item.timestamp),
+        level: item.level_percentage,
+        volume: item.volume_liters
+    }));
+    
+    if (historyChart) {
+        historyChart.destroy();
+    }
+    
+    historyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: 'Nível (%)',
+                data: chartData.map(item => ({ x: item.x, y: item.level })),
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                yAxisID: 'y'
+            }, {
+                label: 'Volume (L)',
+                data: chartData.map(item => ({ x: item.x, y: item.volume })),
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+                       yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'hour',
+                        tooltipFormat: 'DD/MM/YYYY HH:mm'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Data'
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    min: 0,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Nível (%)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Volume (L)'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            }
+        }cript>
+{% endblock %}
+

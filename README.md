@@ -1,7 +1,7 @@
-No seu computador, abra o terminal dentro da pasta do projeto e siga:
+# Monitor de Água - Sistema Simples
 
---------------------------
-bash
+Este é um sistema de monitoramento de nível de água simples, construído com Flask (backend) e HTML, CSS, JavaScript puro (frontend). Ele não requer um processo de build complexo, sendo ideal para uso em ambientes Windows.
+
 # 1. Ver quais arquivos mudaram
 git status
 
@@ -14,19 +14,74 @@ git commit -m "Atualiza código e app.py para deploy"
 # 4. Enviar para o repositório no GitHub
 git push origin main
 Se sua branch não for main, substitua pelo nome que aparece no git status.
-----------------------------------------
 
-💡 Isso salva seu código no repositório remoto para que o Render possa baixar a versão nova.
 
-☁️ 2. Fazer o Manual Deploy no Render
-Depois que o código estiver no GitHub:
+## Funcionalidades
 
-Vá em Render e entre no seu serviço.
+- **Dashboard em Tempo Real**: Exibe o nível de água em porcentagem, volume em litros e distância do sensor em centímetros.
+- **Visualização do Reservatório**: Animação do tanque de água com cores dinâmicas baseadas no nível.
+- **Histórico de Dados**: Gráfico interativo mostrando o histórico do nível e volume de água.
+- **Configurações**: Permite ajustar parâmetros do tanque e limites de alerta.
+- **Autenticação**: Sistema de login simples para acesso seguro.
 
-No menu lateral, clique em Deploys.
+## Como Executar (Windows)
 
-Lá em cima, clique no botão Manual Deploy.
+1.  **Extraia** o conteúdo do arquivo `water-monitor-simple.zip` para uma pasta de sua escolha.
+2.  **Navegue** até a pasta extraída no seu terminal (CMD ou PowerShell).
+3.  **Execute** o arquivo `executar.bat`.
 
-Escolha Deploy latest commit.
+    ```bash
+    executar.bat
+    ```
 
-Aguarde a barra de progresso terminar — o Render vai reconstruir o serviço com seu código novo.
+    Este script fará o seguinte:
+    - Criará um ambiente virtual (se ainda não existir).
+    - Instalará as dependências Python listadas em `requirements.txt`.
+    - Iniciará o servidor Flask.
+
+4.  **Acesse** o site no seu navegador:
+
+    ```
+    http://localhost:5000
+    ```
+
+## Credenciais Padrão
+
+- **Usuário**: `admin`
+- **Senha**: `admin123`
+
+## Estrutura do Projeto
+
+```
+water-monitor-simple/
+├── app.py                # Aplicação Flask principal
+├── requirements.txt      # Dependências Python
+├── executar.bat          # Script para iniciar no Windows
+├── Procfile              # (Opcional) Para deploy em plataformas como Heroku
+├── settings.json         # Configurações do tanque e alertas
+├── users.json            # Usuários do sistema
+├── water_monitor.db      # Banco de dados SQLite (histórico de dados)
+├── static/               # Arquivos estáticos (CSS, JS)
+│   ├── css/
+│   │   └── style.css
+│   └── js/
+│       └── main.js
+└── templates/            # Modelos HTML
+    ├── base.html
+    ├── index.html
+    └── login.html
+```
+
+## API Endpoints
+
+- `POST /api/water-level`: Recebe dados do sensor (ESP32).
+- `GET /api/latest`: Retorna os dados mais recentes.
+- `GET /api/history`: Retorna o histórico de dados.
+- `GET /api/settings`: Retorna as configurações atuais.
+- `POST /api/settings`: Salva novas configurações.
+- `GET /api/status`: Retorna o status do sistema.
+
+## Contribuição
+
+Sinta-se à vontade para contribuir com melhorias, correções de bugs ou novas funcionalidades. Abra uma issue ou envie um pull request.
+
