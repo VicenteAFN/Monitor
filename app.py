@@ -144,29 +144,40 @@ def receive_water_level():
     try:
         data = request.get_json()
         
-        # Atualiza dados atuais
+        settings = load_settings()
+        tank_height = settings['tank_height']
+        dead_zone = settings['dead_zone']
+        total_volume = settings['total_volume']
+
+        distance_cm = float(data.get('distance_cm', 0))
+        water_height = tank_height - distance_cm - dead_zone
+        if water_height < 0: water_height = 0
+
+        level_percentage = (water_height / (tank_height - dead_zone)) * 100
+        if level_percentage > 100: level_percentage = 100
+        if level_percentage < 0: level_percentage = 0
+
+        volume_liters = (level_percentage / 100) * total_volume
+
         current_data = {
-            'distance_cm': float(data.get('distance_cm', 0)),
-            'level_percentage': float(data.get('level_percentage', 0)),
-            'volume_liters': float(data.get('volume_liters', 0)),
+            'distance_cm': distance_cm,
+            'level_percentage': level_percentage,
+            'volume_liters': volume_liters,
             'status': data.get('status', 'online'),
             'timestamp': datetime.now().isoformat()
         }
-        
-        # Adiciona aos dados em memória
+
         water_data.append(current_data.copy())
-        
-        # Mantém apenas os últimos 1000 registros em memória
+
         if len(water_data) > 1000:
             water_data.pop(0)
-        
-        # Salva no banco de dados
+
         save_to_database(current_data)
-        
-        return jsonify({'status': 'success', 'message': 'Dados recebidos'})
-    
+
+        return jsonify({"status": "success", "message": "Dados recebidos"})
+
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 400
+        return jsonify({"status": "error", "message": str(e)}), 400
 
 def save_to_database(data):
     """Salva dados no banco de dados"""
@@ -248,7 +259,6 @@ def get_status():
     })
 
 if __name__ == '__main__':
-    # Inicializa banco de dados
     init_database()
     
     print("=== Monitor de Água - Sistema Simples ===")
@@ -257,4 +267,5 @@ if __name__ == '__main__':
     print("=========================================")
     
     app.run(host='0.0.0.0', port=5000, debug=True)
+
 

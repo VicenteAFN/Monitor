@@ -2,20 +2,6 @@
 
 Este é um sistema de monitoramento de nível de água simples, construído com Flask (backend) e HTML, CSS, JavaScript puro (frontend). Ele não requer um processo de build complexo, sendo ideal para uso em ambientes Windows.
 
-# 1. Ver quais arquivos mudaram
-git status
-
-# 2. Marcar para envio
-git add .
-
-# 3. Criar um commit com mensagem
-git commit -m "Atualiza código e app.py para deploy"
-
-# 4. Enviar para o repositório no GitHub
-git push origin main
-Se sua branch não for main, substitua pelo nome que aparece no git status.
-
-
 ## Funcionalidades
 
 - **Dashboard em Tempo Real**: Exibe o nível de água em porcentagem, volume em litros e distância do sensor em centímetros.

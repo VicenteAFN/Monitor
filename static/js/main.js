@@ -443,3 +443,113 @@ window.Animation = Animation;
 window.loadHistory = loadHistory;
 
 
+
+
+
+// Função para atualizar o dashboard com os dados mais recentes
+
+
+
+
+
+// Função para atualizar o dashboard com os dados mais recentes
+async function updateDashboard() {
+    try {
+        const data = await API.get("/api/latest");
+        if (data) {
+            // Atualiza os elementos do dashboard
+            document.getElementById("water-level").innerText = Utils.formatNumber(data.level_percentage, 1) + "%";
+            document.getElementById("volume").innerText = Utils.formatNumber(data.volume_liters, 0) + " L";
+            document.getElementById("distance").innerText = Utils.formatNumber(data.distance_cm, 1) + " cm";
+            document.getElementById("last-update").innerText = Utils.formatDate(data.timestamp);
+
+            // Atualiza o status
+            const statusElement = document.getElementById("system-status");
+            if (data.status === "online") {
+                statusElement.querySelector("span").innerText = "Online";
+                statusElement.classList.remove("text-danger");
+                statusElement.classList.add("text-success");
+            } else {
+                statusElement.querySelector("span").innerText = "Offline";
+                statusElement.classList.remove("text-success");
+                statusElement.classList.add("text-danger");
+            }
+
+            // Anima o tanque
+            Animation.animateTank(data.level_percentage);
+
+            // Atualiza o status do nível
+            const levelStatus = document.getElementById("level-status");
+            if (data.level_percentage >= 70) {
+                levelStatus.textContent = "Nível Alto";
+                levelStatus.className = "text-success";
+            } else if (data.level_percentage >= 30) {
+                levelStatus.textContent = "Nível Normal";
+                levelStatus.className = "text-warning";
+            } else {
+                levelStatus.textContent = "Nível Baixo";
+                levelStatus.className = "text-danger";
+            }
+
+            // Atualiza a cor do tanque
+            const waterFill = document.getElementById("water-fill");
+            if (data.level_percentage >= 70) {
+                waterFill.style.backgroundColor = "#28a745";
+            } else if (data.level_percentage >= 30) {
+                waterFill.style.backgroundColor = "#ffc107";
+            } else {
+                waterFill.style.backgroundColor = "#dc3545";
+            }
+
+            // Atualiza as dimensões do tanque
+            const settings = await API.get("/api/settings");
+            document.getElementById("volume-total").innerText = `de ${Utils.formatNumber(settings.total_volume, 0)} L total`;
+            document.getElementById("tank-info").innerText = `Reservatório de ${Utils.formatNumber(settings.total_volume, 0)}L`;
+            document.getElementById("tank-dimensions").innerText = `${Utils.formatNumber(settings.tank_height, 0)}cm × ${Utils.formatNumber(settings.tank_width, 0)}cm × ${Utils.formatNumber(settings.tank_length, 0)}cm`;
+
+            // Atualiza alertas
+            updateAlerts(data.level_percentage, settings.low_alert_threshold, settings.high_alert_threshold);
+        }
+    } catch (error) {
+        console.error("Erro ao atualizar o dashboard:", error);
+    }
+}
+
+// Função para atualizar alertas
+function updateAlerts(level_percentage, low_threshold, high_threshold) {
+    const alertsContainer = document.getElementById("alerts-container");
+    alertsContainer.innerHTML = ""; // Limpa alertas existentes
+
+    if (level_percentage <= low_threshold) {
+        alertsContainer.innerHTML += `
+            <div class="text-danger mb-1">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>Nível de água muito baixo!
+            </div>
+        `;
+    } else if (level_percentage >= high_threshold) {
+        alertsContainer.innerHTML += `
+            <div class="text-info mb-1">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>Nível de água muito alto!
+            </div>
+        `;
+    }
+
+    if (alertsContainer.innerHTML === "") {
+        alertsContainer.innerHTML = `
+            <div class="text-success">
+                <i class="bi bi-check-circle me-2"></i>Nenhum alerta
+            </div>
+        `;
+    }
+}
+
+// Atualiza o dashboard a cada 5 segundos
+setInterval(updateDashboard, 5000);
+
+// Carrega os dados iniciais
+document.addEventListener("DOMContentLoaded", function() {
+    updateDashboard();
+    loadHistory();
+});
+
+

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Colina - Monitor de Água{% endblock %}
+{% block title %}Dashboard - Monitor de Água{% endblock %}
 
 {% block content %}
 <!-- Cabeçalho -->
@@ -9,7 +9,7 @@
         <div class="d-flex align-items-center">
             <i class="bi bi-droplet-fill me-2" style="font-size: 1.5rem;"></i>
             <div>
-                <span class="navbar-brand mb-0 h1">Monitor de Água - Condominio Colina dos Cedros</span>
+                <span class="navbar-brand mb-0 h1">Monitor de Água</span>
                 <small class="d-block text-light opacity-75">Sistema de monitoramento em tempo real</small>
             </div>
         </div>
@@ -59,7 +59,7 @@
                         <div>
                             <h6 class="card-subtitle mb-2 text-muted">Volume</h6>
                             <h2 id="volume" class="card-title text-info mb-1">0 L</h2>
-                            <small id="volume-total" class="text-muted">de 40000 L total</small>
+                            <small id="volume-total" class="text-muted">de 1000 L total</small>
                         </div>
                         <div class="bg-info bg-opacity-10 rounded-circle p-3">
                             <i class="bi bi-droplet-fill text-info"></i>
@@ -136,8 +136,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <h6 id="tank-info" class="text-muted">Reservatório de 40.000L</h6>
-                            <small id="tank-dimensions" class="text-muted">1000cm × 200cm × 200cm</small>
+                            <h6 id="tank-info" class="text-muted">Reservatório de 1000L</h6>
+                            <small id="tank-dimensions" class="text-muted">100cm × 100cm × 100cm</small>
                         </div>
                     </div>
                 </div>
@@ -213,15 +213,15 @@
                             <form id="settings-form">
                                 <div class="mb-3">
                                     <label for="tank_height" class="form-label">Altura da Caixa (cm)</label>
-                                    <input type="number" class="form-control" id="tank_height" name="tank_height" value="1000">
+                                    <input type="number" class="form-control" id="tank_height" name="tank_height" value="100">
                                 </div>
                                 <div class="mb-3">
                                     <label for="tank_width" class="form-label">Largura da Caixa (cm)</label>
-                                    <input type="number" class="form-control" id="tank_width" name="tank_width" value="200">
+                                    <input type="number" class="form-control" id="tank_width" name="tank_width" value="100">
                                 </div>
                                 <div class="mb-3">
                                     <label for="tank_length" class="form-label">Comprimento da Caixa (cm)</label>
-                                    <input type="number" class="form-control" id="tank_length" name="tank_length" value="200">
+                                    <input type="number" class="form-control" id="tank_length" name="tank_length" value="100">
                                 </div>
                                 <div class="mb-3">
                                     <label for="dead_zone" class="form-label">Zona Morta (cm)</label>
@@ -229,7 +229,7 @@
                                 </div>
                                 <div class="mb-3">
                                     <label for="total_volume" class="form-label">Volume Total (L)</label>
-                                    <input type="number" class="form-control" id="total_volume" name="total_volume" value="40000">
+                                    <input type="number" class="form-control" id="total_volume" name="total_volume" value="1000">
                                 </div>
                             </form>
                         </div>
@@ -250,16 +250,14 @@
                             </div>
                             <div class="mb-3">
                                 <label for="high_alert_threshold" class="form-label">Alerta Nível Alto (%)</label>
-                                <input type="number" class="form-control" id="high_alert_threshold" name="high_alert_threshold" value="101">
+                                <input type="number" class="form-control" id="high_alert_threshold" name="high_alert_threshold" value="90">
                             </div>
                             
                             <button type="button" class="btn btn-primary w-100" onclick="saveSettings()">
                                 <i class="bi bi-check-lg me-2"></i>Salvar Configurações
                             </button>
                             
-                            <div id="save-message" class="mt-3" style="display: none;"></div> 
-                            <h5>Sistema criado por: Vicente Fernandes (47)99950-2463
-                            </h5>
+                            <div id="save-message" class="mt-3" style="display: none;"></div>
                         </div>
                     </div>
                 </div>
@@ -275,15 +273,187 @@
 let historyChart = null;
 let currentSettings = {};
 
-// Inicialização
-document.addEventListener('DOMContentLoaded', function() {
-    loadSettings();
-    updateData();
-    loadHistory();
-    
-    // Atualiza dados a cada 5 segundos
-    setInterval(updateData, 5000);
-});
+// Função para carregar configurações
+async function loadSettings() {
+    try {
+        currentSettings = await API.get("/api/settings");
+        document.getElementById("tank_height").value = currentSettings.tank_height;
+        document.getElementById("tank_width").value = currentSettings.tank_width;
+        document.getElementById("tank_length").value = currentSettings.tank_length;
+        document.getElementById("dead_zone").value = currentSettings.dead_zone;
+        document.getElementById("total_volume").value = currentSettings.total_volume;
+        document.getElementById("low_alert_threshold").value = currentSettings.low_alert_threshold;
+        document.getElementById("high_alert_threshold").value = currentSettings.high_alert_threshold;
+    } catch (error) {
+        console.error("Erro ao carregar configurações:", error);
+    }
+}
+
+// Função para salvar configurações
+async function saveSettings() {
+    const settings = {
+        tank_height: parseFloat(document.getElementById("tank_height").value),
+        tank_width: parseFloat(document.getElementById("tank_width").value),
+        tank_length: parseFloat(document.getElementById("tank_length").value),
+        dead_zone: parseFloat(document.getElementById("dead_zone").value),
+        total_volume: parseFloat(document.getElementById("total_volume").value),
+        low_alert_threshold: parseFloat(document.getElementById("low_alert_threshold").value),
+        high_alert_threshold: parseFloat(document.getElementById("high_alert_threshold").value)
+    };
+
+    const errors = Validation.validateTankSettings(settings);
+    const saveMessage = document.getElementById("save-message");
+
+    if (errors.length > 0) {
+        saveMessage.innerHTML = `<div class="alert alert-danger">${errors.join("<br>")}</div>`;
+        saveMessage.style.display = "block";
+        return;
+    }
+
+    try {
+        await API.post("/api/settings", settings);
+        Notifications.show("Configurações salvas com sucesso!", "success");
+        saveMessage.style.display = "none";
+        loadSettings(); // Recarrega as configurações para atualizar currentSettings
+        updateDashboard(); // Atualiza o dashboard com as novas configurações
+    } catch (error) {
+        console.error("Erro ao salvar configurações:", error);
+        Notifications.show("Erro ao salvar configurações.", "danger");
+        saveMessage.innerHTML = `<div class="alert alert-danger">Erro ao salvar configurações.</div>`;
+        saveMessage.style.display = "block";
+    }
+}
+
+// Função para atualizar status de conexão
+function updateStatus(isOnline) {
+    const statusBadge = document.getElementById("status-badge");
+    const systemStatus = document.getElementById("system-status");
+
+    if (isOnline) {
+        statusBadge.classList.remove("bg-secondary");
+        statusBadge.classList.add("bg-success");
+        statusBadge.innerHTML = `<i class="bi bi-wifi me-1"></i>Online`;
+        systemStatus.querySelector("span").innerText = "Online";
+        systemStatus.classList.remove("text-danger");
+        systemStatus.classList.add("text-success");
+    } else {
+        statusBadge.classList.remove("bg-success");
+        statusBadge.classList.add("bg-secondary");
+        statusBadge.innerHTML = `<i class="bi bi-wifi-off me-1"></i>Offline`;
+        systemStatus.querySelector("span").innerText = "Offline";
+        systemStatus.classList.remove("text-success");
+        systemStatus.classList.add("text-danger");
+    }
+}
+
+// Função para carregar histórico e exibir gráfico
+async function loadHistory() {
+    try {
+        const response = await API.get("/api/history");
+        const data = response.reverse(); // Inverte para ter os dados mais antigos primeiro
+
+        const ctx = document.getElementById("historyChart").getContext("2d");
+
+        // Prepara dados para o gráfico
+        const chartData = data.map(item => ({
+            x: new Date(item.timestamp),
+            level: item.level_percentage,
+            volume: item.volume_liters
+        }));
+
+        if (historyChart) {
+            historyChart.destroy();
+        }
+
+        historyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Nível (%)',
+                    data: chartData.map(item => ({ x: item.x, y: item.level })),
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    yAxisID: 'y'
+                }, {
+                    label: 'Volume (L)',
+                    data: chartData.map(item => ({ x: item.x, y: item.volume })),
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'hour',
+                            tooltipFormat: 'DD/MM/YYYY HH:mm'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Data'
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        min: 0,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Nível (%)'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Volume (L)'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error("Erro ao carregar histórico:", error);
+    }
+}
+
+// Função para atualizar alertas
+function updateAlerts(level_percentage, low_threshold, high_threshold) {
+    const alertsContainer = document.getElementById("alerts-container");
+    alertsContainer.innerHTML = ""; // Limpa alertas existentes
+
+    if (level_percentage <= low_threshold) {
+        alertsContainer.innerHTML += `
+            <div class="text-danger mb-1">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>Nível de água muito baixo!
+            </div>
+        `;
+    } else if (level_percentage >= high_threshold) {
+        alertsContainer.innerHTML += `
+            <div class="text-info mb-1">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>Nível de água muito alto!
+            </div>
+        `;
+    }
+
+    if (alertsContainer.innerHTML === "") {
+        alertsContainer.innerHTML = `
+            <div class="text-success">
+                <i class="bi bi-check-circle me-2"></i>Nenhum alerta
+            </div>
+        `;
+    }
+}
 
 // Função para atualizar dados
 async function updateData() {
@@ -342,235 +512,34 @@ function updateUI(data) {
     document.getElementById('last-update-detail').textContent = timestamp;
     
     // Verifica alertas
-    updateAlerts(data);
-}
-
-// Função para atualizar status de conexão
-function updateStatus(isOnline) {
-    const statusBadge = document.getElementById('status-badge');
-    const systemStatus = document.getElementById('system-status');
+    updateAlerts(data.level_percentage, currentSettings.low_alert_threshold || 20, currentSettings.high_alert_threshold || 90);
     
-    if (isOnline) {
-        statusBadge.innerHTML = '<i class="bi bi-wifi me-1"></i>Online';
-        statusBadge.className = 'badge bg-success me-3';
-        
-        systemStatus.innerHTML = `
-            <div class="status-indicator bg-success me-2"></div>
-            <span class="text-success">Sistema Online</span>
-        `;
-    } else {
-        statusBadge.innerHTML = '<i class="bi bi-wifi-off me-1"></i>Offline';
-        statusBadge.className = 'badge bg-danger me-3';
-        
-        systemStatus.innerHTML = `
-            <div class="status-indicator bg-danger me-2"></div>
-            <span class="text-danger">Sistema Offline</span>
-        `;
+    // Atualiza informações do tanque
+    if (currentSettings.total_volume) {
+        document.getElementById('volume-total').textContent = `de ${currentSettings.total_volume} L total`;
+        document.getElementById('tank-info').textContent = `Reservatório de ${currentSettings.total_volume}L`;
+        document.getElementById('tank-dimensions').textContent = `${currentSettings.tank_height}cm × ${currentSettings.tank_width}cm × ${currentSettings.tank_length}cm`;
     }
 }
 
-// Função para atualizar alertas
-function updateAlerts(data) {
-    const alertsContainer = document.getElementById('alerts-container');
-    const alerts = [];
+// Inicialização
+document.addEventListener('DOMContentLoaded', function() {
+    loadSettings();
+    loadHistory();
+    updateData();
     
-    if (data.level_percentage <= currentSettings.low_alert_threshold) {
-        alerts.push({
-            type: 'danger',
-            icon: 'exclamation-triangle-fill',
-            message: 'Nível baixo detectado!'
-        });
-    }
-    
-    if (data.level_percentage >= currentSettings.high_alert_threshold) {
-        alerts.push({
-            type: 'warning',
-            icon: 'exclamation-triangle-fill',
-            message: 'Nível alto detectado!'
-        });
-    }
-    
-    if (alerts.length === 0) {
-        alertsContainer.innerHTML = `
-            <div class="text-success">
-                <i class="bi bi-check-circle me-2"></i>Nenhum alerta
-            </div>
-        `;
-    } else {
-        alertsContainer.innerHTML = alerts.map(alert => `
-            <div class="text-${alert.type} mb-2">
-                <i class="bi bi-${alert.icon} me-2"></i>${alert.message}
-            </div>
-        `).join('');
-    }
-}
+    // Atualiza dados a cada 5 segundos
+    setInterval(updateData, 5000);
+});
 
-// Função para carregar configurações
-async function loadSettings() {
-    try {
-        const response = await fetch('/api/settings');
-        currentSettings = await response.json();
-        
-        // Atualiza formulário
-        Object.keys(currentSettings).forEach(key => {
-            const input = document.getElementById(key);
-            if (input) {
-                input.value = currentSettings[key];
-            }
-        });
-        
-        // Atualiza informações do tanque
-        updateTankInfo();
-    } catch (error) {
-        console.error('Erro ao carregar configurações:', error);
-    }
-}
-
-// Função para salvar configurações
-async function saveSettings() {
-    const form = document.getElementById('settings-form');
-    const formData = new FormData(form);
-    const settings = {};
-    
-    for (let [key, value] of formData.entries()) {
-        settings[key] = parseInt(value);
-    }
-    
-    try {
-        const response = await fetch('/api/settings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(settings)
-        });
-        
-        const result = await response.json();
-        
-        if (result.status === 'success') {
-            currentSettings = settings;
-            updateTankInfo();
-            showSaveMessage('Configurações salvas com sucesso!', 'success');
-        } else {
-            showSaveMessage('Erro ao salvar configurações', 'danger');
-        }
-    } catch (error) {
-        console.error('Erro ao salvar configurações:', error);
-        showSaveMessage('Erro ao salvar configurações', 'danger');
-    }
-}
-
-// Função para mostrar mensagem de salvamento
-function showSaveMessage(message, type) {
-    const messageDiv = document.getElementById('save-message');
-    messageDiv.innerHTML = `
-        <div class="alert alert-${type}" role="alert">
-            ${message}
-        </div>
-    `;
-    messageDiv.style.display = 'block';
-    
-    setTimeout(() => {
-        messageDiv.style.display = 'none';
-    }, 3000);
-}
-
-// Função para atualizar informações do tanque
-function updateTankInfo() {
-    document.getElementById('tank-info').textContent = `Reservatório de ${currentSettings.total_volume}L`;
-    document.getElementById('tank-dimensions').textContent = 
-        `${currentSettings.tank_height}cm × ${currentSettings.tank_width}cm × ${currentSettings.tank_length}cm`;
-    document.getElementById('volume-total').textContent = `de ${currentSettings.total_volume} L total`;
-}
-
-// Função para carregar histórico
-async function loadHistory() {
-    try {
-        const response = await fetch('/api/history?days=7');
-        const historyData = await response.json();
-        
-        if (historyData.length > 0) {
-            createHistoryChart(historyData);
-        }
-    } catch (error) {
-        console.error('Erro ao carregar histórico:', error);
-    }
-}
-
-// Função para criar gráfico de histórico
-function createHistoryChart(data) {
-    const ctx = document.getElementById('historyChart').getContext('2d');
-    
-    // Prepara dados para o gráfico
-    const chartData = data.reverse().map(item => ({
-        x: new Date(item.timestamp),
-        level: item.level_percentage,
-        volume: item.volume_liters
-    }));
-    
-    if (historyChart) {
-        historyChart.destroy();
-    }
-    
-    historyChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            datasets: [{
-                label: 'Nível (%)',
-                data: chartData.map(item => ({ x: item.x, y: item.level })),
-                borderColor: '#007bff',
-                backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                yAxisID: 'y'
-            }, {
-                label: 'Volume (L)',
-                data: chartData.map(item => ({ x: item.x, y: item.volume })),
-                borderColor: '#28a745',
-                backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                yAxisID: 'y1'
-            }]
-        },
-        options: {
-                       yAxisID: 'y1'
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        unit: 'hour',
-                        tooltipFormat: 'DD/MM/YYYY HH:mm'
-                    },
-                    title: {
-                        display: true,
-                        text: 'Data'
-                    }
-                },
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    min: 0,
-                    max: 100,
-                    title: {
-                        display: true,
-                        text: 'Nível (%)'
-                    }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: 'Volume (L)'
-                    },
-                    grid: {
-                        drawOnChartArea: false,
-                    },
-                }
-            }
-        }cript>
+// Exporta funções para uso global
+window.loadHistory = loadHistory;
+window.loadSettings = loadSettings;
+window.saveSettings = saveSettings;
+window.updateStatus = updateStatus;
+window.updateData = updateData;
+window.updateUI = updateUI;
+window.updateAlerts = updateAlerts;
+</script>
 {% endblock %}
 
