@@ -1,0 +1,744 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Monitor de Água{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header com informações gerais -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0">Monitor de Água - Múltiplos Reservatórios</h2>
+                    <small class="text-muted">Sistema de monitoramento em tempo real</small>
+                </div>
+                <div class="d-flex gap-2">
+                    <span id="system-status" class="badge bg-secondary">Offline</span>
+                    <span id="last-update" class="badge bg-info">Aguardando dados...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cards dos Reservatórios -->
+    <div class="row mb-4">
+        <!-- Reservatório 1 -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-droplet-fill me-2"></i>
+                        <span id="tank1-name">Reservatório 1</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Dados do Tanque 1 -->
+                        <div class="col-md-6">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="text-center">
+                                        <h3 id="tank1-level" class="display-4 mb-0">0.0%</h3>
+                                        <small id="tank1-level-status" class="text-muted">Nível Baixo</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <i class="bi bi-bucket text-primary fs-3"></i>
+                                        <div>
+                                            <strong id="tank1-volume">0 L</strong>
+                                            <br><small class="text-muted">de <span id="tank1-total">1000 L</span> total</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <i class="bi bi-rulers text-warning fs-3"></i>
+                                        <div>
+                                            <strong id="tank1-distance">0.0 cm</strong>
+                                            <br><small class="text-muted">Sensor à superfície</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Visualização do Tanque 1 -->
+                        <div class="col-md-6">
+                            <div class="text-center">
+                                <h6>Visualização do Reservatório</h6>
+                                <div class="tank-container mx-auto" style="width: 120px; height: 200px; position: relative;">
+                                    <div class="tank-outline" style="width: 100%; height: 100%; border: 3px solid #333; border-radius: 8px; position: relative; background: #f8f9fa;">
+                                        <div id="tank1-water" class="tank-water" style="position: absolute; bottom: 0; left: 0; right: 0; background: #dc3545; border-radius: 0 0 5px 5px; height: 0%; transition: all 0.5s ease;"></div>
+                                        <div class="tank-markers" style="position: absolute; right: -25px; top: 0; height: 100%; display: flex; flex-direction: column; justify-content: space-between; font-size: 10px;">
+                                            <span>100%</span>
+                                            <span>75%</span>
+                                            <span>50%</span>
+                                            <span>25%</span>
+                                            <span>0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <small class="text-muted mt-2 d-block">
+                                    <span id="tank1-dimensions">120cm × 100cm × 100cm</span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Status e Alertas do Tanque 1 -->
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6>Status do Sistema</h6>
+                            <div id="tank1-status" class="text-secondary">
+                                <i class="bi bi-circle-fill me-2"></i>Offline
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Alertas</h6>
+                            <div id="tank1-alerts">
+                                <div class="text-success">
+                                    <i class="bi bi-check-circle me-2"></i>Nenhum alerta
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reservatório 2 -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-droplet-fill me-2"></i>
+                        <span id="tank2-name">Reservatório 2</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Dados do Tanque 2 -->
+                        <div class="col-md-6">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="text-center">
+                                        <h3 id="tank2-level" class="display-4 mb-0">0.0%</h3>
+                                        <small id="tank2-level-status" class="text-muted">Nível Baixo</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <i class="bi bi-bucket text-success fs-3"></i>
+                                        <div>
+                                            <strong id="tank2-volume">0 L</strong>
+                                            <br><small class="text-muted">de <span id="tank2-total">800 L</span> total</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <i class="bi bi-rulers text-warning fs-3"></i>
+                                        <div>
+                                            <strong id="tank2-distance">0.0 cm</strong>
+                                            <br><small class="text-muted">Sensor à superfície</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Visualização do Tanque 2 -->
+                        <div class="col-md-6">
+                            <div class="text-center">
+                                <h6>Visualização do Reservatório</h6>
+                                <div class="tank-container mx-auto" style="width: 120px; height: 200px; position: relative;">
+                                    <div class="tank-outline" style="width: 100%; height: 100%; border: 3px solid #333; border-radius: 8px; position: relative; background: #f8f9fa;">
+                                        <div id="tank2-water" class="tank-water" style="position: absolute; bottom: 0; left: 0; right: 0; background: #dc3545; border-radius: 0 0 5px 5px; height: 0%; transition: all 0.5s ease;"></div>
+                                        <div class="tank-markers" style="position: absolute; right: -25px; top: 0; height: 100%; display: flex; flex-direction: column; justify-content: space-between; font-size: 10px;">
+                                            <span>100%</span>
+                                            <span>75%</span>
+                                            <span>50%</span>
+                                            <span>25%</span>
+                                            <span>0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <small class="text-muted mt-2 d-block">
+                                    <span id="tank2-dimensions">100cm × 80cm × 80cm</span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Status e Alertas do Tanque 2 -->
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6>Status do Sistema</h6>
+                            <div id="tank2-status" class="text-secondary">
+                                <i class="bi bi-circle-fill me-2"></i>Offline
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Alertas</h6>
+                            <div id="tank2-alerts">
+                                <div class="text-success">
+                                    <i class="bi bi-check-circle me-2"></i>Nenhum alerta
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegação por Abas -->
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard-pane" type="button" role="tab">
+                        <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-pane" type="button" role="tab">
+                        <i class="bi bi-graph-up me-2"></i>Histórico
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings-pane" type="button" role="tab">
+                        <i class="bi bi-gear me-2"></i>Configurações
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="mainTabsContent">
+                <!-- Dashboard -->
+                <div class="tab-pane fade show active" id="dashboard-pane" role="tabpanel">
+                    <div class="card mt-3">
+                        <div class="card-body">
+                            <h5><i class="bi bi-graph-up me-2"></i>Histórico dos Últimos 7 Dias</h5>
+                            <canvas id="historyChart" width="400" height="100"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Histórico -->
+                <div class="tab-pane fade" id="history-pane" role="tabpanel">
+                    <div class="card mt-3">
+                        <div class="card-body">
+                            <h5><i class="bi bi-clock-history me-2"></i>Histórico Detalhado</h5>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Tanque</th>
+                                            <th>Data/Hora</th>
+                                            <th>Nível (%)</th>
+                                            <th>Volume (L)</th>
+                                            <th>Distância (cm)</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="history-table-body">
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted">Carregando dados...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configurações -->
+                <div class="tab-pane fade" id="settings-pane" role="tabpanel">
+                    <div class="row mt-3">
+                        <!-- Configurações do Reservatório 1 -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Configurações do Reservatório 1</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="tank1-height" class="form-label">Altura da Caixa (cm)</label>
+                                        <input type="number" class="form-control" id="tank1-height" value="120">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tank1-width" class="form-label">Largura da Caixa (cm)</label>
+                                        <input type="number" class="form-control" id="tank1-width" value="100">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tank1-length" class="form-label">Comprimento da Caixa (cm)</label>
+                                        <input type="number" class="form-control" id="tank1-length" value="100">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tank1-dead-zone" class="form-label">Zona Morta (cm)</label>
+                                        <input type="number" class="form-control" id="tank1-dead-zone" value="5">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tank1-volume" class="form-label">Volume Total (L)</label>
+                                        <input type="number" class="form-control" id="tank1-volume" value="1000">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tank1-low-alert" class="form-label">Alerta Nível Baixo (%)</label>
+                                        <input type="number" class="form-control" id="tank1-low-alert" value="30">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tank1-high-alert" class="form-label">Alerta Nível Alto (%)</label>
+                                        <input type="number" class="form-control" id="tank1-high-alert" value="90">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Configurações do Reservatório 2 -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Configurações do Reservatório 2</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="tank2-height" class="form-label">Altura da Caixa (cm)</label>
+                                        <input type="number" class="form-control" id="tank2-height" value="100">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tank2-width" class="form-label">Largura da Caixa (cm)</label>
+                                        <input type="number" class="form-control" id="tank2-width" value="80">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tank2-length" class="form-label">Comprimento da Caixa (cm)</label>
+                                        <input type="number" class="form-control" id="tank2-length" value="80">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tank2-dead-zone" class="form-label">Zona Morta (cm)</label>
+                                        <input type="number" class="form-control" id="tank2-dead-zone" value="5">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tank2-volume" class="form-label">Volume Total (L)</label>
+                                        <input type="number" class="form-control" id="tank2-volume" value="800">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tank2-low-alert" class="form-label">Alerta Nível Baixo (%)</label>
+                                        <input type="number" class="form-control" id="tank2-low-alert" value="25">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tank2-high-alert" class="form-label">Alerta Nível Alto (%)</label>
+                                        <input type="number" class="form-control" id="tank2-high-alert" value="85">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="text-center">
+                                <button type="button" class="btn btn-primary btn-lg" onclick="saveSettings()">
+                                    <i class="bi bi-check-circle me-2"></i>Salvar Configurações
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Configurações globais
+let currentSettings = {};
+let historyChart = null;
+
+// Inicialização da página
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Página carregada - Sistema Multi-Tanque');
+    loadSettings();
+    updateDashboard();
+    loadHistory();
+    
+    // Atualização automática a cada 5 segundos
+    setInterval(updateDashboard, 5000);
+});
+
+// Carrega configurações do servidor
+async function loadSettings() {
+    try {
+        const response = await fetch('/api/settings');
+        currentSettings = await response.json();
+        
+        // Atualiza interface com configurações
+        updateSettingsUI();
+        
+    } catch (error) {
+        console.error('Erro ao carregar configurações:', error);
+    }
+}
+
+// Atualiza interface com configurações carregadas
+function updateSettingsUI() {
+    if (currentSettings.tanks) {
+        // Tank 1
+        if (currentSettings.tanks.tank1) {
+            const tank1 = currentSettings.tanks.tank1;
+            document.getElementById('tank1-name').textContent = tank1.name;
+            document.getElementById('tank1-height').value = tank1.tank_height;
+            document.getElementById('tank1-width').value = tank1.tank_width;
+            document.getElementById('tank1-length').value = tank1.tank_length;
+            document.getElementById('tank1-dead-zone').value = tank1.dead_zone;
+            document.getElementById('tank1-volume').value = tank1.total_volume;
+            document.getElementById('tank1-low-alert').value = tank1.low_alert_threshold;
+            document.getElementById('tank1-high-alert').value = tank1.high_alert_threshold;
+            document.getElementById('tank1-total').textContent = tank1.total_volume + ' L';
+            document.getElementById('tank1-dimensions').textContent = 
+                `${tank1.tank_height}cm × ${tank1.tank_width}cm × ${tank1.tank_length}cm`;
+        }
+        
+        // Tank 2
+        if (currentSettings.tanks.tank2) {
+            const tank2 = currentSettings.tanks.tank2;
+            document.getElementById('tank2-name').textContent = tank2.name;
+            document.getElementById('tank2-height').value = tank2.tank_height;
+            document.getElementById('tank2-width').value = tank2.tank_width;
+            document.getElementById('tank2-length').value = tank2.tank_length;
+            document.getElementById('tank2-dead-zone').value = tank2.dead_zone;
+            document.getElementById('tank2-volume').value = tank2.total_volume;
+            document.getElementById('tank2-low-alert').value = tank2.low_alert_threshold;
+            document.getElementById('tank2-high-alert').value = tank2.high_alert_threshold;
+            document.getElementById('tank2-total').textContent = tank2.total_volume + ' L';
+            document.getElementById('tank2-dimensions').textContent = 
+                `${tank2.tank_height}cm × ${tank2.tank_width}cm × ${tank2.tank_length}cm`;
+        }
+    }
+}
+
+// Atualiza dashboard com dados mais recentes
+async function updateDashboard() {
+    try {
+        const response = await fetch('/api/latest');
+        const data = await response.json();
+        
+        // Atualiza dados do Tank 1
+        if (data.tank1) {
+            updateTankDisplay('tank1', data.tank1);
+        }
+        
+        // Atualiza dados do Tank 2
+        if (data.tank2) {
+            updateTankDisplay('tank2', data.tank2);
+        }
+        
+        // Atualiza status geral do sistema
+        updateSystemStatus(data);
+        
+    } catch (error) {
+        console.error('Erro ao atualizar dashboard:', error);
+    }
+}
+
+// Atualiza exibição de um tanque específico
+function updateTankDisplay(tankId, tankData) {
+    const level = parseFloat(tankData.level_percentage || 0);
+    const volume = parseFloat(tankData.volume_liters || 0);
+    const distance = parseFloat(tankData.distance_cm || 0);
+    const status = tankData.status || 'offline';
+    const timestamp = tankData.timestamp;
+    
+    // Atualiza valores numéricos
+    document.getElementById(`${tankId}-level`).textContent = level.toFixed(1) + '%';
+    document.getElementById(`${tankId}-volume`).textContent = Math.round(volume) + ' L';
+    document.getElementById(`${tankId}-distance`).textContent = distance.toFixed(1) + ' cm';
+    
+    // Atualiza status do nível
+    const levelStatus = document.getElementById(`${tankId}-level-status`);
+    if (level >= 70) {
+        levelStatus.textContent = 'Nível Alto';
+        levelStatus.className = 'text-success';
+    } else if (level >= 30) {
+        levelStatus.textContent = 'Nível Normal';
+        levelStatus.className = 'text-warning';
+    } else {
+        levelStatus.textContent = 'Nível Baixo';
+        levelStatus.className = 'text-danger';
+    }
+    
+    // Atualiza visualização do tanque
+    updateTankVisualization(tankId, level);
+    
+    // Atualiza status de conexão
+    const statusElement = document.getElementById(`${tankId}-status`);
+    if (status === 'online') {
+        statusElement.innerHTML = '<i class="bi bi-circle-fill me-2"></i>Online';
+        statusElement.className = 'text-success';
+    } else {
+        statusElement.innerHTML = '<i class="bi bi-circle-fill me-2"></i>Offline';
+        statusElement.className = 'text-secondary';
+    }
+    
+    // Atualiza alertas
+    updateTankAlerts(tankId, level);
+}
+
+// Atualiza visualização do tanque
+function updateTankVisualization(tankId, level) {
+    const waterElement = document.getElementById(`${tankId}-water`);
+    
+    // Define cor baseada no nível
+    let color = '#dc3545'; // Vermelho para baixo
+    if (level >= 70) {
+        color = '#28a745'; // Verde para alto
+    } else if (level >= 30) {
+        color = '#ffc107'; // Amarelo para normal
+    }
+    
+    waterElement.style.height = level + '%';
+    waterElement.style.background = color;
+}
+
+// Atualiza alertas do tanque
+function updateTankAlerts(tankId, level) {
+    const alertsContainer = document.getElementById(`${tankId}-alerts`);
+    const tankConfig = currentSettings.tanks?.[tankId];
+    
+    if (!tankConfig) return;
+    
+    const lowThreshold = tankConfig.low_alert_threshold || 20;
+    const highThreshold = tankConfig.high_alert_threshold || 90;
+    
+    alertsContainer.innerHTML = '';
+    
+    if (level <= lowThreshold) {
+        alertsContainer.innerHTML = `
+            <div class="text-danger">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>Nível de água muito baixo!
+            </div>
+        `;
+    } else if (level >= highThreshold) {
+        alertsContainer.innerHTML = `
+            <div class="text-info">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>Nível de água muito alto!
+            </div>
+        `;
+    } else {
+        alertsContainer.innerHTML = `
+            <div class="text-success">
+                <i class="bi bi-check-circle me-2"></i>Nenhum alerta
+            </div>
+        `;
+    }
+}
+
+// Atualiza status geral do sistema
+function updateSystemStatus(data) {
+    const systemStatus = document.getElementById('system-status');
+    const lastUpdate = document.getElementById('last-update');
+    
+    // Verifica se pelo menos um tanque está online
+    const hasOnlineTank = (data.tank1?.status === 'online') || (data.tank2?.status === 'online');
+    
+    if (hasOnlineTank) {
+        systemStatus.textContent = 'Online';
+        systemStatus.className = 'badge bg-success';
+        
+        // Usa o timestamp mais recente
+        const latestTimestamp = data.tank1?.timestamp > data.tank2?.timestamp ? 
+            data.tank1.timestamp : data.tank2.timestamp;
+        
+        if (latestTimestamp) {
+            const date = new Date(latestTimestamp);
+            lastUpdate.textContent = date.toLocaleString('pt-BR');
+        }
+    } else {
+        systemStatus.textContent = 'Offline';
+        systemStatus.className = 'badge bg-secondary';
+        lastUpdate.textContent = 'Aguardando dados...';
+    }
+}
+
+// Carrega histórico para o gráfico
+async function loadHistory() {
+    try {
+        const response = await fetch('/api/history?days=7');
+        const historyData = await response.json();
+        
+        // Processa dados para o gráfico
+        const tank1Data = historyData.filter(item => item.tank_id === 'tank1');
+        const tank2Data = historyData.filter(item => item.tank_id === 'tank2');
+        
+        // Atualiza gráfico
+        updateHistoryChart(tank1Data, tank2Data);
+        
+        // Atualiza tabela de histórico
+        updateHistoryTable(historyData);
+        
+    } catch (error) {
+        console.error('Erro ao carregar histórico:', error);
+    }
+}
+
+// Atualiza gráfico de histórico
+function updateHistoryChart(tank1Data, tank2Data) {
+    const ctx = document.getElementById('historyChart').getContext('2d');
+    
+    if (historyChart) {
+        historyChart.destroy();
+    }
+    
+    historyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: 'Reservatório 1',
+                data: tank1Data.map(item => ({
+                    x: new Date(item.timestamp),
+                    y: item.level_percentage
+                })),
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Reservatório 2',
+                data: tank2Data.map(item => ({
+                    x: new Date(item.timestamp),
+                    y: item.level_percentage
+                })),
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'hour',
+                        displayFormats: {
+                            hour: 'DD/MM HH:mm'
+                        }
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Nível (%)'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true
+                }
+            }
+        }
+    });
+}
+
+// Atualiza tabela de histórico
+function updateHistoryTable(historyData) {
+    const tbody = document.getElementById('history-table-body');
+    
+    if (historyData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhum dado disponível</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = historyData.slice(0, 20).map(item => `
+        <tr>
+            <td><span class="badge ${item.tank_id === 'tank1' ? 'bg-primary' : 'bg-success'}">${item.tank_id === 'tank1' ? 'Reservatório 1' : 'Reservatório 2'}</span></td>
+            <td>${new Date(item.timestamp).toLocaleString('pt-BR')}</td>
+            <td>${item.level_percentage.toFixed(1)}%</td>
+            <td>${Math.round(item.volume_liters)} L</td>
+            <td>${item.distance_cm.toFixed(1)} cm</td>
+            <td><span class="badge ${item.status === 'online' ? 'bg-success' : 'bg-secondary'}">${item.status}</span></td>
+        </tr>
+    `).join('');
+}
+
+// Salva configurações
+async function saveSettings() {
+    try {
+        const settings = {
+            tanks: {
+                tank1: {
+                    name: 'Reservatório 1',
+                    tank_height: parseInt(document.getElementById('tank1-height').value),
+                    tank_width: parseInt(document.getElementById('tank1-width').value),
+                    tank_length: parseInt(document.getElementById('tank1-length').value),
+                    dead_zone: parseInt(document.getElementById('tank1-dead-zone').value),
+                    total_volume: parseInt(document.getElementById('tank1-volume').value),
+                    low_alert_threshold: parseInt(document.getElementById('tank1-low-alert').value),
+                    high_alert_threshold: parseInt(document.getElementById('tank1-high-alert').value),
+                    enabled: true
+                },
+                tank2: {
+                    name: 'Reservatório 2',
+                    tank_height: parseInt(document.getElementById('tank2-height').value),
+                    tank_width: parseInt(document.getElementById('tank2-width').value),
+                    tank_length: parseInt(document.getElementById('tank2-length').value),
+                    dead_zone: parseInt(document.getElementById('tank2-dead-zone').value),
+                    total_volume: parseInt(document.getElementById('tank2-volume').value),
+                    low_alert_threshold: parseInt(document.getElementById('tank2-low-alert').value),
+                    high_alert_threshold: parseInt(document.getElementById('tank2-high-alert').value),
+                    enabled: true
+                }
+            }
+        };
+        
+        // Validação básica
+        for (const tankId in settings.tanks) {
+            const tank = settings.tanks[tankId];
+            if (tank.low_alert_threshold >= tank.high_alert_threshold) {
+                alert('Alerta de nível alto deve estar entre 0 e 100');
+                return;
+            }
+        }
+        
+        const response = await fetch('/api/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settings)
+        });
+        
+        if (response.ok) {
+            currentSettings = settings;
+            updateSettingsUI();
+            updateDashboard();
+            
+            // Mostra notificação de sucesso
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show position-fixed';
+            alert.style.top = '20px';
+            alert.style.right = '20px';
+            alert.style.zIndex = '9999';
+            alert.innerHTML = `
+                <i class="bi bi-check-circle me-2"></i>Configurações salvas com sucesso!
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alert);
+            
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.parentNode.removeChild(alert);
+                }
+            }, 3000);
+        } else {
+            throw new Error('Erro ao salvar configurações');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao salvar configurações:', error);
+        alert('Erro ao salvar configurações: ' + error.message);
+    }
+}
+</script>
+{% endblock %}
+
