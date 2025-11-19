@@ -172,6 +172,7 @@ async function updateDashboard() {
         const data = await API.get("/api/latest");
         if(!data) return;
 
+        // Apenas valores são atualizados, nomes permanecem fixos no HTML
         safeSetText("water-level", Utils.formatNumber(data.level_percentage,1)+'%');
         safeSetText("volume", Utils.formatNumber(data.volume_liters,0)+' L');
         safeSetText("distance", Utils.formatNumber(data.distance_cm,1)+' cm');
