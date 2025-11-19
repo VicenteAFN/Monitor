@@ -1,13 +1,11 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, render_template, jsonify
 from datetime import datetime
+import random
 
 app = Flask(__name__)
 
-# Histórico em memória (para testes)
-history = []
-
-# Configurações do tanque
-tank_settings = {
+# Simulação de dados do tanque
+TANK_SETTINGS = {
     "tank_name": "Reservatório Principal",
     "tank_height": 1000,   # cm
     "tank_width": 200,     # cm
@@ -18,79 +16,47 @@ tank_settings = {
     "high_alert_threshold": 100
 }
 
-# Status do sistema
-system_status = "offline"
+# Histórico de medições (simulação)
+history_data = []
 
-# ===========================
-# Rotas do front-end
-# ===========================
-@app.route('/')
-def index():
-    return render_template('index_multi.html')
-
-# ===========================
-# API: Receber leitura
-# ===========================
-@app.route('/api/water-level', methods=['POST'])
-def receive_data():
-    global system_status
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Dados inválidos"}), 400
-
-    # Campos esperados: level_percentage, volume_liters, distance_cm, status
-    entry = {
-        "timestamp": datetime.now().isoformat(),
-        "level_percentage": float(data.get("level_percentage", 0)),
-        "volume_liters": float(data.get("volume_liters", 0)),
-        "distance_cm": float(data.get("distance_cm", 0)),
-        "status": data.get("status", "offline")
+def simulate_tank_reading():
+    """Simula leitura do sensor do tanque"""
+    distance_cm = random.uniform(0, TANK_SETTINGS["tank_height"])
+    level_percentage = max(0, min(100, 100 - ((distance_cm - TANK_SETTINGS["dead_zone"]) / TANK_SETTINGS["tank_height"] * 100)))
+    volume_liters = TANK_SETTINGS["total_volume"] * (level_percentage / 100)
+    return {
+        "distance_cm": round(distance_cm, 2),
+        "level_percentage": round(level_percentage, 2),
+        "volume_liters": round(volume_liters, 2),
+        "status": "online",
+        "timestamp": datetime.utcnow().isoformat()
     }
 
-    history.append(entry)
-    system_status = entry["status"]
-    return jsonify({"message": "Recebido com sucesso"}), 200
+# Página principal multi-tanque
+@app.route("/")
+def index_multi():
+    return render_template("index_multi.html")
 
-# ===========================
-# API: Última leitura
-# ===========================
-@app.route('/api/latest', methods=['GET'])
-def latest_reading():
-    if not history:
-        return jsonify({
-            "timestamp": None,
-            "level_percentage": 0,
-            "volume_liters": 0,
-            "distance_cm": 0,
-            "status": "offline"
-        })
-    return jsonify(history[-1])
+# Última leitura
+@app.route("/api/latest")
+def api_latest():
+    reading = simulate_tank_reading()
+    # Armazena histórico
+    history_data.append(reading)
+    # Mantém apenas os últimos 500 registros
+    if len(history_data) > 500:
+        history_data.pop(0)
+    return jsonify(reading)
 
-# ===========================
-# API: Histórico completo
-# ===========================
-@app.route('/api/history', methods=['GET'])
-def get_history():
-    return jsonify(history)
+# Histórico de leituras
+@app.route("/api/history")
+def api_history():
+    return jsonify(history_data)
 
-# ===========================
-# API: Configurações do tanque
-# ===========================
-@app.route('/api/settings', methods=['GET'])
-def get_settings():
-    return jsonify(tank_settings)
+# Configurações do tanque
+@app.route("/api/settings")
+def api_settings():
+    return jsonify(TANK_SETTINGS)
 
-@app.route('/api/settings', methods=['POST'])
-def update_settings():
-    global tank_settings
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Dados inválidos"}), 400
-    tank_settings.update(data)
-    return jsonify({"message": "Configurações atualizadas"}), 200
-
-# ===========================
-# Rodar o servidor
-# ===========================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5003, debug=True)
