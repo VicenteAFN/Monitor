@@ -1,21 +1,9 @@
 /**
- * Monitor de Água - JavaScript Principal (Versão Atualizada E Corrigida)
+ * Monitor de Água - JavaScript Principal (Versão Segura)
  */
 
 // Histórico do gráfico
 let historyChart = null;
-
-// Valores padrão do tanque
-const defaultSettings = {
-    tank_name: "Reservatório Principal",
-    tank_height: 1000,
-    tank_width: 200,
-    tank_length: 200,
-    total_volume: 40000,
-    dead_zone: 0,
-    low_alert_threshold: 20,
-    high_alert_threshold: 100
-};
 
 // Utilitários para formatação
 const Utils = {
@@ -30,6 +18,11 @@ const Utils = {
             hour: '2-digit',
             minute: '2-digit'
         });
+    },
+    formatTime: (dateString) => {
+        if (!dateString) return "-";
+        const date = new Date(dateString);
+        return date.toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     },
     getLevelColor: (percentage) => {
         if (percentage >= 70) return 'success';
@@ -82,23 +75,23 @@ const Validation = {
     },
     validateTankSettings: function(settings) {
         const errors = [];
-        if (!this.isPositiveNumber(settings.tank_height)) errors.push('Altura deve ser positiva');
-        if (!this.isPositiveNumber(settings.tank_width)) errors.push('Largura deve ser positiva');
-        if (!this.isPositiveNumber(settings.tank_length)) errors.push('Comprimento deve ser positivo');
-        if (!this.isPositiveNumber(settings.dead_zone)) errors.push('Zona morta deve ser positiva');
-        if (!this.isPositiveNumber(settings.total_volume)) errors.push('Volume total deve ser positivo');
-        if (!this.isInRange(settings.low_alert_threshold, 0, 100)) errors.push('Alerta baixo inválido');
-        if (!this.isInRange(settings.high_alert_threshold, 0, 100)) errors.push('Alerta alto inválido');
-        if (settings.low_alert_threshold >= settings.high_alert_threshold) errors.push('Limites invertidos');
+        if (!this.isPositiveNumber(settings.tank_height)) errors.push('Altura da caixa deve ser um número positivo');
+        if (!this.isPositiveNumber(settings.tank_width)) errors.push('Largura da caixa deve ser um número positivo');
+        if (!this.isPositiveNumber(settings.tank_length)) errors.push('Comprimento da caixa deve ser um número positivo');
+        if (!this.isPositiveNumber(settings.dead_zone)) errors.push('Zona morta deve ser um número positivo');
+        if (!this.isPositiveNumber(settings.total_volume)) errors.push('Volume total deve ser um número positivo');
+        if (!this.isInRange(settings.low_alert_threshold, 0, 100)) errors.push('Alerta de nível baixo deve estar entre 0 e 100');
+        if (!this.isInRange(settings.high_alert_threshold, 0, 100)) errors.push('Alerta de nível alto deve estar entre 0 e 100');
+        if (settings.low_alert_threshold >= settings.high_alert_threshold) errors.push('Alerta de nível baixo deve ser menor que o alerta de nível alto');
         return errors;
     }
 };
 
 // LocalStorage
 const Storage = {
-    set: (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch(e){ console.error(e); return false; } },
-    get: (key, defaultValue = null) => { try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : defaultValue; } catch(e){ console.error(e); return defaultValue; } },
-    remove: (key) => { try { localStorage.removeItem(key); return true; } catch(e){ console.error(e); return false; } }
+    set: (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch(e){console.error(e); return false; } },
+    get: (key, defaultValue = null) => { try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : defaultValue; } catch(e){console.error(e); return defaultValue; } },
+    remove: (key) => { try { localStorage.removeItem(key); return true; } catch(e){console.error(e); return false; } }
 };
 
 // API
@@ -119,84 +112,32 @@ const API = {
 // Animações
 const Animation = {
     fadeIn: (el, duration = 300) => { if(!el) return; el.style.opacity='0'; el.style.display='block'; let start=null; const animate=(ts)=>{ if(!start) start=ts; const prog=Math.min((ts-start)/duration,1); el.style.opacity=prog; if(prog<1) requestAnimationFrame(animate); }; requestAnimationFrame(animate); },
-    fadeOut: (el, duration = 300) => { if(!el) return; let start=null; const animate=(ts)=>{ if(!start) start=ts; const prog=Math.min((ts-start)/duration,1); el.style.opacity=1-prog; if(prog<1) requestAnimationFrame(animate); else el.style.display='none'; }; requestAnimationFrame(animate); }
+    fadeOut: (el, duration = 300) => { if(!el) return; let start=null; const animate=(ts)=>{ if(!start) start=ts; const prog=Math.min((ts-start)/duration,1); el.style.opacity=1-prog; if(prog<1) requestAnimationFrame(animate); else el.style.display='none'; }; requestAnimationFrame(animate); },
+    animateTank: (target, duration=1000) => {
+        const waterFill = document.getElementById("water-fill");
+        if(!waterFill) return;
+        const start = parseFloat(waterFill.style.height) || 0;
+        const diff = target - start;
+        let tsStart=null;
+        const animate = (ts)=>{ if(!tsStart) tsStart=ts; const prog=Math.min((ts-tsStart)/duration,1); waterFill.style.height=(start + diff*prog)+'%'; if(prog<1) requestAnimationFrame(animate); };
+        requestAnimationFrame(animate);
+    }
 };
 
-// FUNÇÃO CORRIGIDA!!!
-function updateTank1(data = {}, settings = {}) {
-
-    // mescla configurações
-    const s = Object.assign({}, defaultSettings, settings);
-
-    // pega nome atual do HTML
-    const nameEl = document.getElementById("tank1-name");
-    const htmlName = nameEl ? nameEl.textContent.trim() : defaultSettings.tank_name;
-
-    // monta dados preservando o nome manual
-    const d = {
-        level_percentage: data.level_percentage ?? 0,
-        volume_liters: data.volume_liters ?? 0,
-        distance_cm: data.distance_cm ?? 0,
-        tank_name: data.tank_name || htmlName   // <- ESSENCIAL
-    };
-
-    // Nível %
-    const levelEl = document.getElementById("tank1-level");
-    if(levelEl) levelEl.textContent = Utils.formatNumber(d.level_percentage,1) + "%";
-
-    // Status do nível
-    const statusEl = document.getElementById("tank1-level-status");
-    if(statusEl){
-        statusEl.textContent = Utils.getLevelStatus(d.level_percentage);
-        statusEl.className = "text-" + Utils.getLevelColor(d.level_percentage);
-    }
-
-    // Volume
-    const volumeEl = document.getElementById("tank1-volume");
-    if(volumeEl) volumeEl.textContent = Utils.formatNumber(d.volume_liters,0) + " L";
-
-    // Total
-    const totalEl = document.getElementById("tank1-total");
-    if(totalEl) totalEl.textContent = Utils.formatNumber(s.total_volume,0) + " L";
-
-    // Distância do sensor
-    const distEl = document.getElementById("tank1-distance");
-    if(distEl) distEl.textContent = Utils.formatNumber(d.distance_cm,1) + " cm";
-
-    // Dimensões
-    const dimEl = document.getElementById("tank1-dimensions");
-    if(dimEl) dimEl.textContent =
-        `${Utils.formatNumber(s.tank_height,0)}cm × ${Utils.formatNumber(s.tank_width,0)}cm × ${Utils.formatNumber(s.tank_length,0)}cm`;
-
-    // Nome do tanque (agora respeita seu HTML)
-    if(nameEl) nameEl.textContent = d.tank_name;
-
-    // Água visual
-    const waterEl = document.getElementById("tank1-water");
-    if(waterEl){
-        waterEl.style.height = d.level_percentage + "%";
-        waterEl.style.backgroundColor =
-            d.level_percentage >= 70 ? "#28a745" :
-            d.level_percentage >= 30 ? "#ffc107" :
-            "#dc3545";
-    }
+// Função segura para atualizar texto
+function safeSetText(id, value) {
+    const el = document.getElementById(id);
+    if(el) el.textContent = value;
 }
 
-// Histórico + gráfico
+// Carrega histórico e exibe gráfico
 async function loadHistory() {
     try {
         const data = (await API.get("/api/history")).reverse();
         const ctxEl = document.getElementById("historyChart");
         if(!ctxEl) return;
-
-        const chartData = data.map(i => ({
-            x: new Date(i.timestamp),
-            level: i.level_percentage,
-            volume: i.volume_liters
-        }));
-
+        const chartData = data.map(i => ({ x: new Date(i.timestamp), level: i.level_percentage, volume: i.volume_liters }));
         if(historyChart) historyChart.destroy();
-
         historyChart = new Chart(ctxEl.getContext("2d"), {
             type:'line',
             data:{ datasets:[
@@ -206,44 +147,68 @@ async function loadHistory() {
             options:{
                 responsive:true,
                 scales:{
-                    x:{ type:'time', time:{ unit:'hour' }, title:{ display:true, text:'Data' } },
-                    y:{ min:0, max:100, title:{display:true,text:'Nível (%)'} },
-                    y1:{ position:'right', title:{display:true,text:'Volume (L)'}, grid:{ drawOnChartArea:false } }
+                    x:{ type:'time', time:{ unit:'hour', tooltipFormat:'dd/MM/yyyy HH:mm' }, title:{ display:true, text:'Data' } },
+                    y:{ type:'linear', display:true, position:'left', min:0, max:100, title:{display:true,text:'Nível (%)'} },
+                    y1:{ type:'linear', display:true, position:'right', title:{display:true,text:'Volume (L)'}, grid:{ drawOnChartArea:false } }
                 }
             }
         });
     } catch(e){ console.error("Erro ao carregar histórico:", e); }
 }
 
-// Alertas
+// Atualiza alertas
 function updateAlerts(level, low, high) {
     const container = document.getElementById("alerts-container");
     if(!container) return;
     container.innerHTML='';
-    if(level<=low) container.innerHTML=`<div class="text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>Nível muito baixo</div>`;
-    else if(level>=high) container.innerHTML=`<div class="text-info"><i class="bi bi-exclamation-triangle-fill me-2"></i>Nível muito alto</div>`;
-    else container.innerHTML=`<div class="text-success"><i class="bi bi-check-circle me-2"></i>Nível normal</div>`;
+    if(level<=low) container.innerHTML=`<div class="text-danger mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i>Nível de água muito baixo!</div>`;
+    else if(level>=high) container.innerHTML=`<div class="text-info mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i>Nível de água muito alto!</div>`;
+    else container.innerHTML=`<div class="text-success"><i class="bi bi-check-circle me-2"></i>Nenhum alerta</div>`;
 }
 
-// Atualização do dashboard
+// Atualiza dashboard
 async function updateDashboard() {
     try {
-        const data = await API.get("/api/latest") || {};
-        const settings = await API.get("/api/settings") || defaultSettings;
+        const data = await API.get("/api/latest");
+        if(!data) return;
 
-        updateTank1(data, settings);
-
+        safeSetText("water-level", Utils.formatNumber(data.level_percentage,1)+'%');
+        safeSetText("volume", Utils.formatNumber(data.volume_liters,0)+' L');
+        safeSetText("distance", Utils.formatNumber(data.distance_cm,1)+' cm');
         safeSetText("last-update", Utils.formatDate(data.timestamp));
 
-        const systemStatus = document.getElementById("system-status");
-        if(systemStatus && systemStatus.querySelector("span")){
-            const span = systemStatus.querySelector("span");
+        // Status
+        const statusEl = document.getElementById("system-status");
+        if(statusEl && statusEl.querySelector("span")) {
+            const span=statusEl.querySelector("span");
             span.textContent = data.status==="online"?"Online":"Offline";
             span.className = data.status==="online"?"text-success":"text-danger";
         }
 
-        updateAlerts(data.level_percentage || 0, settings.low_alert_threshold, settings.high_alert_threshold);
+        // Nível do tanque
+        const levelStatus = document.getElementById("level-status");
+        if(levelStatus){
+            const lvl = data.level_percentage || 0;
+            levelStatus.textContent = Utils.getLevelStatus(lvl);
+            levelStatus.className = "text-"+Utils.getLevelColor(lvl);
+        }
 
+        const waterFill = document.getElementById("water-fill");
+        if(waterFill){
+            Animation.animateTank(data.level_percentage);
+            const lvl = data.level_percentage || 0;
+            waterFill.style.backgroundColor = lvl>=70?"#28a745":(lvl>=30?"#ffc107":"#dc3545");
+        }
+
+        // Dimensões e volume
+        const settings = await API.get("/api/settings");
+        if(settings){
+            safeSetText("volume-total", `de ${Utils.formatNumber(settings.total_volume,0)} L total`);
+            safeSetText("tank-info", `Reservatório de ${Utils.formatNumber(settings.total_volume,0)}L`);
+            safeSetText("tank-dimensions", `${Utils.formatNumber(settings.tank_height,0)}cm × ${Utils.formatNumber(settings.tank_width,0)}cm × ${Utils.formatNumber(settings.tank_length,0)}cm`);
+
+            updateAlerts(data.level_percentage, settings.low_alert_threshold, settings.high_alert_threshold);
+        }
     } catch(e){ console.error("Erro ao atualizar dashboard:", e); }
 }
 
@@ -252,21 +217,21 @@ document.addEventListener("DOMContentLoaded", () => {
     updateDashboard();
     loadHistory();
 
+    // Tooltips e popovers
     const tooltipList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipList.map(el => new bootstrap.Tooltip(el));
-
     const popoverList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
     popoverList.map(el => new bootstrap.Popover(el));
 
-    document.querySelectorAll('.card').forEach((card,index)=> {
-        setTimeout(()=>card.classList.add('fade-in'), index*100);
-    });
+    // Fade-in cards
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card,index)=>setTimeout(()=>card.classList.add('fade-in'), index*100));
 });
 
-// Atualiza a cada 5s
+// Atualiza a cada 5 segundos
 setInterval(updateDashboard, 5000);
 
-// Exporta globais
+// Exporta global
 window.Utils = Utils;
 window.Notifications = Notifications;
 window.Validation = Validation;
@@ -275,4 +240,3 @@ window.API = API;
 window.Animation = Animation;
 window.loadHistory = loadHistory;
 window.updateDashboard = updateDashboard;
-window.updateTank1 = updateTank1;
