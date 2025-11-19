@@ -1,75 +1,96 @@
 from flask import Flask, request, jsonify, render_template
 from datetime import datetime
-from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
 
-# ----------------------------
-# CONFIGURAÇÃO DO RESERVATÓRIO
-# ----------------------------
-TANK1_NAME = "Reservatório Principal"
-TANK1_HEIGHT = 1000  # cm
-TANK1_WIDTH = 200    # cm
-TANK1_LENGTH = 200   # cm
-TANK1_CAPACITY = (TANK1_HEIGHT * TANK1_WIDTH * TANK1_LENGTH) / 1000  # litros
+# Histórico em memória (para testes)
+history = []
 
-
-# ----------------------------
-# ARMAZENAMENTO DA ÚLTIMA LEITURA
-# ----------------------------
-last_reading = {
-    "distance": None,
-    "timestamp": None
+# Configurações do tanque
+tank_settings = {
+    "tank_name": "Reservatório Principal",
+    "tank_height": 1000,   # cm
+    "tank_width": 200,     # cm
+    "tank_length": 200,    # cm
+    "total_volume": 40000, # litros
+    "dead_zone": 0,
+    "low_alert_threshold": 20,
+    "high_alert_threshold": 100
 }
 
-# ----------------------------
-# ROTA PRINCIPAL
-# ----------------------------
-@app.route("/")
+# Status do sistema
+system_status = "offline"
+
+# ===========================
+# Rotas do front-end
+# ===========================
+@app.route('/')
 def index():
-    return render_template(
-        "index_multi.html",
-        tank1_name=TANK1_NAME,
-        tank1_height=TANK1_HEIGHT,
-        tank1_width=TANK1_WIDTH,
-        tank1_length=TANK1_LENGTH,
-        tank1_capacity=TANK1_CAPACITY
-    )
+    return render_template('index_multi.html')
 
-
-# ----------------------------
-# RECEBER DADOS DO ESP32 (LoRa → WiFi → Flask)
-# ----------------------------
-@app.route("/api/water-level", methods=["POST"])
-def receive_water_level():
-    global last_reading
-
+# ===========================
+# API: Receber leitura
+# ===========================
+@app.route('/api/water-level', methods=['POST'])
+def receive_data():
+    global system_status
     data = request.get_json()
-    if not data or "distance" not in data:
-        return jsonify({"error": "Formato inválido"}), 400
+    if not data:
+        return jsonify({"error": "Dados inválidos"}), 400
 
-    last_reading["distance"] = float(data["distance"])
-    last_reading["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Campos esperados: level_percentage, volume_liters, distance_cm, status
+    entry = {
+        "timestamp": datetime.now().isoformat(),
+        "level_percentage": float(data.get("level_percentage", 0)),
+        "volume_liters": float(data.get("volume_liters", 0)),
+        "distance_cm": float(data.get("distance_cm", 0)),
+        "status": data.get("status", "offline")
+    }
 
-    print(f"[NOVO DADO] Distância recebida: {last_reading['distance']} cm")
+    history.append(entry)
+    system_status = entry["status"]
+    return jsonify({"message": "Recebido com sucesso"}), 200
 
-    return jsonify({"status": "OK"}), 200
+# ===========================
+# API: Última leitura
+# ===========================
+@app.route('/api/latest', methods=['GET'])
+def latest_reading():
+    if not history:
+        return jsonify({
+            "timestamp": None,
+            "level_percentage": 0,
+            "volume_liters": 0,
+            "distance_cm": 0,
+            "status": "offline"
+        })
+    return jsonify(history[-1])
 
+# ===========================
+# API: Histórico completo
+# ===========================
+@app.route('/api/history', methods=['GET'])
+def get_history():
+    return jsonify(history)
 
-# ----------------------------
-# FORNECER ÚLTIMA LEITURA PARA O FRONTEND
-# ----------------------------
-@app.route("/api/last-reading", methods=["GET"])
-def get_last_reading():
-    if last_reading["distance"] is None:
-        return jsonify({"distance": None})
+# ===========================
+# API: Configurações do tanque
+# ===========================
+@app.route('/api/settings', methods=['GET'])
+def get_settings():
+    return jsonify(tank_settings)
 
-    return jsonify(last_reading)
+@app.route('/api/settings', methods=['POST'])
+def update_settings():
+    global tank_settings
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Dados inválidos"}), 400
+    tank_settings.update(data)
+    return jsonify({"message": "Configurações atualizadas"}), 200
 
-
-# ----------------------------
-# RODAR LOCALMENTE
-# ----------------------------
+# ===========================
+# Rodar o servidor
+# ===========================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5003, debug=True)
