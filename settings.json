@@ -1,9 +1,26 @@
 {
-  "tank_height": 120,
-  "tank_width": 100,
-  "tank_length": 100,
-  "dead_zone": 5,
-  "total_volume": 1000,
-  "low_alert_threshold": 30,
-  "high_alert_threshold": 90
+  "tanks": {
+    "tank1": {
+      "name": "Reservatório Principal",
+      "tank_height": 1000,
+      "tank_width": 200,
+      "tank_length": 200,
+      "dead_zone": 10,
+      "total_volume": 40000,
+      "low_alert_threshold": 20,
+      "high_alert_threshold": 90,
+      "enabled": true
+    },
+    "tank2": {
+      "name": "Caixa D1",
+      "tank_height": 120,
+      "tank_width": 80,
+      "tank_length": 80,
+      "dead_zone": 5,
+      "total_volume": 800,
+      "low_alert_threshold": 25,
+      "high_alert_threshold": 85,
+      "enabled": true
+    }
+  }
 }

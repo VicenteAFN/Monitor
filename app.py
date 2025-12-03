@@ -3,6 +3,7 @@
 """
 Monitor de Água - Aplicação Flask com Múltiplos Reservatórios
 Suporte para múltiplos tanques de água com identificação por tank_id
+Versão Personalizada: Reservatório Principal e Caixa D1
 """
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
@@ -15,31 +16,33 @@ import hashlib
 
 app = Flask(__name__)
 app.secret_key = 'water-monitor-multi-secret-key-2024'
-CORS(app)
 
-# Configurações padrão para múltiplos tanques
+# Configuração CORS mais permissiva para Render
+CORS(app, origins="*", allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+
+# Configurações padrão para múltiplos tanques - PERSONALIZADAS
 DEFAULT_SETTINGS = {
     'tanks': {
         'tank1': {
-            'name': 'Reservatório 1',
-            'tank_height': 100,
-            'tank_width': 100,
-            'tank_length': 100,
-            'dead_zone': 5,
-            'total_volume': 1000,
+            'name': 'Reservatório Principal',
+            'tank_height': 1000,  # 1000 cm = 10 metros
+            'tank_width': 200,    # 200 cm = 2 metros
+            'tank_length': 200,   # 200 cm = 2 metros
+            'dead_zone': 10,      # 10 cm de zona morta para tanque grande
+            'total_volume': 40000, # 40.000 litros (1000 * 200 * 200 / 1000)
             'low_alert_threshold': 20,
             'high_alert_threshold': 90,
             'enabled': True
         },
         'tank2': {
-            'name': 'Reservatório 2',
+            'name': 'Caixa D1',
             'tank_height': 120,
             'tank_width': 80,
             'tank_length': 80,
             'dead_zone': 5,
             'total_volume': 800,
-            'low_alert_threshold': 20,
-            'high_alert_threshold': 90,
+            'low_alert_threshold': 25,
+            'high_alert_threshold': 85,
             'enabled': True
         }
     }
@@ -111,6 +114,8 @@ def load_settings():
         with open('settings_multi.json', 'r') as f:
             return json.load(f)
     except FileNotFoundError:
+        # Salva as configurações padrão personalizadas
+        save_settings(DEFAULT_SETTINGS)
         return DEFAULT_SETTINGS
 
 def save_settings(settings):
@@ -359,14 +364,27 @@ def get_status():
         }
     })
 
+# Rota adicional para debug no Render
+@app.route('/api/debug')
+def debug_info():
+    """Informações de debug para troubleshooting"""
+    return jsonify({
+        'current_data': current_data,
+        'water_data_count': {k: len(v) for k, v in water_data.items()},
+        'settings': load_settings(),
+        'timestamp': datetime.now().isoformat()
+    })
+
 if __name__ == '__main__':
     init_database()
     
-    print("=== Monitor de Água - Sistema com Múltiplos Reservatórios ===")
+    print("=== Monitor de Água - Sistema Personalizado ===")
     print("Usuário padrão: admin")
     print("Senha padrão: admin123")
-    print("Tanques suportados: tank1, tank2")
-    print("===========================================================")
+    print("Tank1: Reservatório Principal (40.000L)")
+    print("Tank2: Caixa D1 (editável)")
+    print("===============================================")
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
-
+    # Configuração para produção (Render)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
