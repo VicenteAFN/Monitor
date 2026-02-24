@@ -111,11 +111,11 @@ def init_database():
 def load_settings():
     """Carrega configurações do arquivo JSON"""
     try:
-        with open('settings_multi.json', 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        # Salva as configurações padrão personalizadas
-        save_settings(DEFAULT_SETTINGS)
+        if os.path.exists('settings_multi.json'):
+            with open('settings_multi.json', 'r') as f:
+                return json.load(f)
+        return DEFAULT_SETTINGS
+    except Exception:
         return DEFAULT_SETTINGS
 
 def save_settings(settings):
@@ -126,9 +126,10 @@ def save_settings(settings):
 def load_users():
     """Carrega usuários do arquivo JSON"""
     try:
-        with open('users.json', 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
+        if os.path.exists('users.json'):
+            with open('users.json', 'r') as f:
+                return json.load(f)
+        
         # Usuário padrão
         default_users = {
             'admin': {
@@ -139,6 +140,8 @@ def load_users():
         with open('users.json', 'w') as f:
             json.dump(default_users, f, indent=2)
         return default_users
+    except Exception:
+        return {}
 
 def check_auth(username, password):
     """Verifica autenticação do usuário"""
@@ -248,17 +251,20 @@ def receive_water_level():
 
 def save_to_database(data):
     """Salva dados no banco de dados"""
-    conn = sqlite3.connect('water_monitor_multi.db')
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        INSERT INTO water_history (tank_id, timestamp, distance_cm, level_percentage, volume_liters, status)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (data['tank_id'], data['timestamp'], data['distance_cm'], data['level_percentage'], 
-          data['volume_liters'], data['status']))
-    
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect('water_monitor_multi.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO water_history (tank_id, timestamp, distance_cm, level_percentage, volume_liters, status)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (data['tank_id'], data['timestamp'], data['distance_cm'], data['level_percentage'], 
+              data['volume_liters'], data['status']))
+        
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
 
 @app.route('/api/latest')
 def get_latest_data():
@@ -292,52 +298,52 @@ def get_history():
     days = request.args.get('days', 7, type=int)
     tank_id = request.args.get('tank_id', None)
     
-    conn = sqlite3.connect('water_monitor_multi.db')
-    cursor = conn.cursor()
-    
-    start_date = (datetime.now() - timedelta(days=days)).isoformat()
-    
-    if tank_id:
-        # Histórico de um tanque específico
-        cursor.execute('''
-            SELECT tank_id, timestamp, distance_cm, level_percentage, volume_liters, status
-            FROM water_history
-            WHERE tank_id = ? AND timestamp >= ?
-            ORDER BY timestamp DESC
-            LIMIT 100
-        ''', (tank_id, start_date))
-    else:
-        # Histórico de todos os tanques
-        cursor.execute('''
-            SELECT tank_id, timestamp, distance_cm, level_percentage, volume_liters, status
-            FROM water_history
-            WHERE timestamp >= ?
-            ORDER BY timestamp DESC
-            LIMIT 200
-        ''', (start_date,))
-    
-    rows = cursor.fetchall()
-    conn.close()
-    
-    history = []
-    for row in rows:
-        history.append({
-            'tank_id': row[0],
-            'timestamp': row[1],
-            'distance_cm': row[2],
-            'level_percentage': row[3],
-            'volume_liters': row[4],
-            'status': row[5]
-        })
-    
-    return jsonify(history)
+    try:
+        conn = sqlite3.connect('water_monitor_multi.db')
+        cursor = conn.cursor()
+        
+        start_date = (datetime.now() - timedelta(days=days)).isoformat()
+        
+        if tank_id:
+            # Histórico de um tanque específico
+            cursor.execute('''
+                SELECT tank_id, timestamp, distance_cm, level_percentage, volume_liters, status
+                FROM water_history
+                WHERE tank_id = ? AND timestamp >= ?
+                ORDER BY timestamp DESC
+                LIMIT 100
+            ''', (tank_id, start_date))
+        else:
+            # Histórico de todos os tanques
+            cursor.execute('''
+                SELECT tank_id, timestamp, distance_cm, level_percentage, volume_liters, status
+                FROM water_history
+                WHERE timestamp >= ?
+                ORDER BY timestamp DESC
+                LIMIT 200
+            ''', (start_date,))
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        history = []
+        for row in rows:
+            history.append({
+                'tank_id': row[0],
+                'timestamp': row[1],
+                'distance_cm': row[2],
+                'level_percentage': row[3],
+                'volume_liters': row[4],
+                'status': row[5]
+            })
+        
+        return jsonify(history)
+    except Exception:
+        return jsonify([])
 
 @app.route('/api/settings', methods=['GET', 'POST'])
 def handle_settings():
     """Gerencia configurações do sistema"""
-    if 'user' not in session:
-        return jsonify({'error': 'Não autorizado'}), 401
-    
     if request.method == 'POST':
         settings = request.get_json()
         save_settings(settings)

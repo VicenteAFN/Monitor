@@ -1,7 +1,7 @@
 {
   "tanks": {
     "tank1": {
-      "name": "Reservat\u00f3rio 1",
+      "name": "Reservatório 1",
       "tank_height": 120,
       "tank_width": 100,
       "tank_length": 100,
@@ -12,7 +12,7 @@
       "enabled": true
     },
     "tank2": {
-      "name": "Reservat\u00f3rio 2",
+      "name": "Reservatório 2",
       "tank_height": 100,
       "tank_width": 80,
       "tank_length": 80,
@@ -24,3 +24,4 @@
     }
   }
 }
+
