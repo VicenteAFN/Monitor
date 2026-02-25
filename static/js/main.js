@@ -1,91 +1,163 @@
-/**
- * Monitor de Água - JavaScript Principal (Condomínio Colina dos Cedros)
- * Lógica de frontend para o Reservatório Principal com design moderno.
- */
+document.addEventListener('DOMContentLoaded', function() {
+    const navItems = document.querySelectorAll('.main-nav .nav-item');
+    const tabContents = document.querySelectorAll('.tab-content');
 
-// Utilitários para formatação
-const Utils = {
-    formatNumber: function(number, decimals = 1) {
-        return parseFloat(number).toFixed(decimals);
-    },
-    formatDate: function(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleString("pt-BR", {
-            day: "2-digit", month: "2-digit", year: "numeric",
-            hour: "2-digit", minute: "2-digit", second: "2-digit"
-        });
-    }
-};
+    // Activate default tab (Dashboard) and hide others
+    document.getElementById('dashboard').classList.add('active');
+    document.querySelector('.main-nav .nav-item[data-tab="dashboard"]').classList.add('active');
 
-// Funções de API
-const API = {
-    get: async function(url) {
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return await response.json();
-        } catch (error) {
-            console.error("Erro na requisição GET para " + url + ":", error);
-            throw error;
-        }
-    },
-    post: async function(url, data) {
-        try {
-            const response = await fetch(url, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(data)
+    navItems.forEach(item => {
+        item.addEventListener('click', function(event) {
+            event.preventDefault();
+            const targetTab = this.dataset.tab;
+
+            // Remove active class from all nav items and add to clicked one
+            navItems.forEach(link => link.classList.remove('active'));
+            this.classList.add('active');
+
+            // Hide all tab contents and show the target one
+            tabContents.forEach(content => {
+                if (content.id === targetTab) {
+                    content.classList.add('active');
+                } else {
+                    content.classList.remove('active');
+                }
             });
+
+            // If switching to history tab, fetch history data
+            if (targetTab === 'history') {
+                fetchHistoryData();
+            }
+        });
+    });
+
+    const tank1WaterFill = document.getElementById('tank1-water-fill');
+    const tank1LevelPercentage = document.getElementById('tank1-level-percentage');
+    const tank1LevelText = document.getElementById('tank1-level-text');
+    const tank1VolumeLiters = document.getElementById('tank1-volume-liters');
+    const tank1DistanceCm = document.getElementById('tank1-distance-cm');
+    const tank1Timestamp = document.getElementById('tank1-timestamp');
+    const tank1Alert = document.getElementById('tank1-alert');
+    const statusIndicator = document.getElementById('status-indicator');
+    const statusText = document.getElementById('status-text');
+
+    let tank1Chart;
+
+    function updateDashboard(data) {
+        console.log('Dados recebidos para atualização do dashboard:', data);
+
+        // Check if data is valid and contains tank1 information
+        if (data && data.tank_id === 'tank1') {
+            const percentage = parseFloat(data.level_percentage);
+            const volume = parseFloat(data.volume_liters);
+            const distance = parseFloat(data.distance_cm);
+            const timestamp = data.timestamp;
+            const status = data.status;
+
+            // Update tank visual
+            tank1WaterFill.style.height = `${Math.min(100, Math.max(0, percentage))}%`;
+            tank1LevelPercentage.textContent = `${percentage.toFixed(1)}%`;
+            tank1LevelText.textContent = `${percentage.toFixed(1)}%`;
+            tank1VolumeLiters.textContent = `${volume.toFixed(2)} L`;
+            tank1DistanceCm.textContent = `${distance.toFixed(2)} cm`;
+            tank1Timestamp.textContent = moment(timestamp).format('DD/MM/YYYY HH:mm:ss');
+
+            // Color and alert logic
+            if (percentage < 20) {
+                tank1WaterFill.style.backgroundColor = '#dc3545'; // Red
+                tank1Alert.className = 'alert-message alert-low';
+                tank1Alert.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Nível muito baixo! Abastecer!';
+            } else if (percentage > 100) {
+                tank1WaterFill.style.backgroundColor = '#ffc107'; // Yellow
+                tank1Alert.className = 'alert-message alert-high';
+                tank1Alert.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Nível acima de 100%! Possível transbordamento ou sensor descalibrado.';
+            } else {
+                tank1WaterFill.style.backgroundColor = '#007bff'; // Blue
+                tank1Alert.className = 'alert-message';
+                tank1Alert.innerHTML = '';
+            }
+
+            // Update online/offline status
+            if (status === 'online') {
+                statusIndicator.classList.remove('status-offline');
+                statusIndicator.classList.add('status-online');
+                statusText.textContent = 'Online';
+            } else {
+                statusIndicator.classList.remove('status-online');
+                statusIndicator.classList.add('status-offline');
+                statusText.textContent = 'Offline';
+            }
+        } else {
+            console.warn('Dados inválidos ou sem tank_id=tank1 para atualização do dashboard.');
+            // If data is invalid, set status to offline and show error
+            statusIndicator.classList.remove('status-online');
+            statusIndicator.classList.add('status-offline');
+            statusText.textContent = 'Offline';
+            if (document.getElementById('tank1-alert')) {
+                document.getElementById('tank1-alert').className = 'alert-message alert-error';
+                document.getElementById('tank1-alert').innerHTML = '<i class="fas fa-exclamation-circle"></i> Erro de conexão ou dados. Verifique o sensor.';
+            }
+        }
+    }
+
+    async function fetchLatestData() {
+        console.log('Buscando dados mais recentes...');
+        try {
+            const response = await fetch('/api/latest');
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            return await response.json();
+            const data = await response.json();
+            console.log('Dados mais recentes recebidos:', data);
+            updateDashboard(data);
         } catch (error) {
-            console.error("Erro na requisição POST para " + url + ":", error);
-            throw error;
+            console.error('Erro ao buscar dados mais recentes:', error);
+            // In case of error, ensure status is offline and show error message
+            statusIndicator.classList.remove('status-online');
+            statusIndicator.classList.add('status-offline');
+            statusText.textContent = 'Offline';
+            if (document.getElementById('tank1-alert')) {
+                document.getElementById('tank1-alert').className = 'alert-message alert-error';
+                document.getElementById('tank1-alert').innerHTML = '<i class="fas fa-exclamation-circle"></i> Erro de conexão ou dados. Verifique o sensor.';
+            }
         }
     }
-};
 
-// Variável global para o gráfico
-let tank1ChartInstance;
-
-// Função para carregar histórico e exibir gráfico
-async function loadHistory() {
-    try {
-        const response = await API.get("/api/history?tank_id=tank1");
-        const data = response.reverse(); // Inverte para ter os dados mais antigos primeiro
-
-        const ctx = document.getElementById("tank1Chart").getContext("2d");
-
-        const chartData = data.map(item => ({
-            x: new Date(item.timestamp),
-            level: item.level_percentage,
-            volume: item.volume_liters
-        }));
-
-        if (tank1ChartInstance) {
-            tank1ChartInstance.destroy();
+    async function fetchHistoryData() {
+        console.log('Buscando dados históricos...');
+        try {
+            const response = await fetch('/api/history');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const historyData = await response.json();
+            console.log('Dados históricos recebidos:', historyData);
+            updateChart(historyData);
+        } catch (error) {
+            console.error('Erro ao buscar dados históricos:', error);
         }
-        tank1ChartInstance = new Chart(ctx, {
-            type: "line",
+    }
+
+    function updateChart(data) {
+        const labels = data.map(item => moment(item.timestamp).format('HH:mm'));
+        const percentages = data.map(item => item.level_percentage);
+
+        if (tank1Chart) {
+            tank1Chart.destroy();
+        }
+
+        const ctx = document.getElementById('tank1Chart').getContext('2d');
+        tank1Chart = new Chart(ctx, {
+            type: 'line',
             data: {
+                labels: labels,
                 datasets: [{
-                    label: "Nível (%)",
-                    data: chartData.map(item => ({ x: item.x, y: item.level })),
-                    borderColor: "#007bff",
-                    backgroundColor: "rgba(0, 123, 255, 0.1)",
-                    yAxisID: "y"
-                }, {
-                    label: "Volume (L)",
-                    data: chartData.map(item => ({ x: item.x, y: item.volume })),
-                    borderColor: "#28a745",
-                    backgroundColor: "rgba(40, 167, 69, 0.1)",
-                    yAxisID: "y1"
+                    label: 'Nível (%)',
+                    data: percentages,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: true,
+                    tension: 0.4
                 }]
             },
             options: {
@@ -93,222 +165,31 @@ async function loadHistory() {
                 maintainAspectRatio: false,
                 scales: {
                     x: {
-                        type: "time",
+                        type: 'time',
                         time: {
-                            unit: "hour",
-                            tooltipFormat: "dd/MM/yyyy HH:mm:ss"
+                            unit: 'minute',
+                            tooltipFormat: 'HH:mm:ss'
                         },
                         title: {
                             display: true,
-                            text: "Data"
+                            text: 'Hora'
                         }
                     },
                     y: {
-                        type: "linear",
-                        display: true,
-                        position: "left",
-                        min: 0,
-                        max: 120, // Pode ir acima de 100% para mostrar transbordo
+                        beginAtZero: true,
                         title: {
                             display: true,
-                            text: "Nível (%)"
-                        }
-                    },
-                    y1: {
-                        type: "linear",
-                        display: true,
-                        position: "right",
-                        title: {
-                            display: true,
-                            text: "Volume (L)"
+                            text: 'Nível (%)'
                         },
-                        grid: {
-                            drawOnChartArea: false,
-                        },
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
+                        max: 100
                     }
                 }
             }
         });
-    } catch (error) {
-        console.error("Erro ao carregar histórico:", error);
-    }
-}
-
-// Função para atualizar o dashboard com os dados mais recentes
-async function updateDashboard() {
-    console.log("Iniciando updateDashboard...");
-    try {
-        console.log("Buscando dados de /api/latest/tank1...");
-        const data = await API.get("/api/latest/tank1");
-        console.log("Dados recebidos de /api/latest/tank1:", data);
-        console.log("Buscando configurações de /api/settings...");
-        const settings = await API.get("/api/settings");
-        console.log("Configurações recebidas de /api/settings:", settings);
-        const tank1Settings = settings.tanks.tank1;
-
-        if (data) {
-            console.log("Atualizando elementos do dashboard com dados:", data);
-            // Atualiza os elementos do dashboard
-            document.getElementById("tank1-level-text").innerText = Utils.formatNumber(data.level_percentage, 1) + "%";
-            document.getElementById("tank1-volume").innerText = Utils.formatNumber(data.volume_liters, 0) + " L";
-            document.getElementById("tank1-distance").innerText = Utils.formatNumber(data.distance_cm, 1) + " cm";
-            document.getElementById("tank1-timestamp").innerText = Utils.formatDate(data.timestamp);
-
-            // Atualiza o status do indicador
-            const statusIndicator = document.getElementById("tank1-status-indicator");
-            const statusText = document.getElementById("tank1-status-text");
-            if (data.status === "online") {
-                statusText.innerText = "Online";
-                statusIndicator.classList.remove("status-offline");
-                statusIndicator.classList.add("status-online");
-            } else {
-                statusText.innerText = "Offline";
-                statusIndicator.classList.remove("status-online");
-                statusIndicator.classList.add("status-offline");
-            }
-
-            // Anima o tanque
-            const waterFill = document.getElementById("tank1-water");
-            let displayPercentage = Math.min(Math.max(data.level_percentage, 0), 100); // Limita para exibição visual
-            waterFill.style.height = displayPercentage + "%";
-
-            // Atualiza a cor do tanque e alertas
-            updateAlerts(data.level_percentage, tank1Settings.low_alert_threshold, tank1Settings.high_alert_threshold);
-        }
-    } catch (error) {
-        console.error("Erro ao atualizar o dashboard:", error);
-        console.log("Tentando definir status como offline devido a erro.");
-        // Se houver erro, define o status como offline
-        const statusIndicator = document.getElementById("tank1-status-indicator");
-        const statusText = document.getElementById("tank1-status-text");
-        statusText.innerText = "Offline";
-        statusIndicator.classList.remove("status-online");
-        statusIndicator.classList.add("status-offline");
-        document.getElementById("tank1-alert").innerHTML = `<span class="alert-error">Erro de conexão com o servidor.</span>`;
-    }
-}
-
-// Função para atualizar alertas
-function updateAlerts(level_percentage, low_threshold, high_threshold) {
-    const alertElement = document.getElementById("tank1-alert");
-    alertElement.className = "alert-message"; // Reseta classes
-
-    if (level_percentage < low_threshold) {
-        alertElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Nível de água muito baixo! (${Utils.formatNumber(level_percentage, 1)}%)`;
-        alertElement.classList.add("alert-low");
-    } else if (level_percentage > high_threshold) {
-        alertElement.innerHTML = `<i class="fas fa-exclamation-circle"></i> **ATENÇÃO!** Nível de água acima de 100%! (${Utils.formatNumber(level_percentage, 1)}%)`;
-        alertElement.classList.add("alert-high");
-    } else {
-        alertElement.innerHTML = `<i class="fas fa-check-circle"></i> Nível normal.`;
-        alertElement.classList.add("alert-normal");
-    }
-}
-
-// Função para carregar configurações e preencher o formulário
-async function loadSettingsForm() {
-    try {
-        console.log("Buscando configurações de /api/settings...");
-        const settings = await API.get("/api/settings");
-        console.log("Configurações recebidas de /api/settings:", settings);
-        const tank1Settings = settings.tanks.tank1;
-
-        document.getElementById("tank1_name").value = tank1Settings.name;
-        document.getElementById("tank1_height").value = tank1Settings.tank_height;
-        document.getElementById("tank1_width").value = tank1Settings.tank_width;
-        document.getElementById("tank1_length").value = tank1Settings.tank_length;
-        document.getElementById("tank1_sensor_at_100_percent_cm").value = tank1Settings.sensor_at_100_percent_cm;
-        document.getElementById("tank1_sensor_at_0_percent_cm").value = tank1Settings.sensor_at_0_percent_cm;
-        document.getElementById("tank1_total_volume").value = tank1Settings.total_volume;
-        document.getElementById("tank1_low_alert_threshold").value = tank1Settings.low_alert_threshold;
-        document.getElementById("tank1_high_alert_threshold").value = tank1Settings.high_alert_threshold;
-
-    } catch (error) {
-        console.error("Erro ao carregar configurações:", error);
-    }
-}
-
-// Função para salvar configurações (apenas thresholds são editáveis)
-async function saveSettings(event) {
-    event.preventDefault();
-    const settingsMessage = document.getElementById("settingsMessage");
-    settingsMessage.innerText = "";
-    settingsMessage.className = "message";
-
-    const lowAlert = parseFloat(document.getElementById("tank1_low_alert_threshold").value);
-    const highAlert = parseFloat(document.getElementById("tank1_high_alert_threshold").value);
-
-    if (isNaN(lowAlert) || lowAlert < 0 || lowAlert > 100 || isNaN(highAlert) || highAlert < 0 || highAlert > 100) {
-        settingsMessage.className = "message error";
-        settingsMessage.innerText = "Os limites de alerta devem ser números entre 0 e 100.";
-        return;
-    }
-    if (lowAlert >= highAlert) {
-        settingsMessage.className = "message error";
-        settingsMessage.innerText = "O alerta de nível baixo deve ser menor que o alerta de nível alto.";
-        return;
     }
 
-    try {
-        const currentSettings = await API.get("/api/settings");
-        currentSettings.tanks.tank1.low_alert_threshold = lowAlert;
-        currentSettings.tanks.tank1.high_alert_threshold = highAlert;
-        
-        const response = await API.post("/api/settings", currentSettings);
-        if (response.status === "success") {
-            settingsMessage.className = "message success";
-            settingsMessage.innerText = "Configurações salvas com sucesso!";
-            updateDashboard(); // Atualiza o dashboard com as novas configurações
-        } else {
-            settingsMessage.className = "message error";
-            settingsMessage.innerText = "Erro ao salvar configurações.";
-        }
-    } catch (error) {
-        console.error("Erro ao salvar configurações:", error);
-        settingsMessage.className = "message error";
-        settingsMessage.innerText = "Erro de comunicação com o servidor.";
-    }
-}
-
-// Event Listeners para navegação por abas
-    document.addEventListener("DOMContentLoaded", function() {
-    console.log("DOM completamente carregado.");
-    const navItems = document.querySelectorAll(".main-nav .nav-item");
-    const tabContents = document.querySelectorAll(".tab-content");
-
-    navItems.forEach(item => {
-        item.addEventListener("click", function(event) {
-            event.preventDefault();
-
-            navItems.forEach(nav => nav.classList.remove("active"));
-            tabContents.forEach(tab => tab.classList.remove("active"));
-
-            this.classList.add("active");
-            const targetId = this.getAttribute("data-tab");
-            document.getElementById(targetId).classList.add("active");
-
-            if (targetId === "history") {
-                loadHistory();
-            } else if (targetId === "settings") {
-                loadSettingsForm();
-            }
-        });
-    });
-
-    // Event listener para o formulário de configurações
-    const settingsForm = document.getElementById("settingsForm");
-    if (settingsForm) {
-        settingsForm.addEventListener("submit", saveSettings);
-    }
-
-    // Carrega os dados iniciais e atualiza o dashboard a cada 5 segundos
-    updateDashboard();
-    setInterval(updateDashboard, 5000);
-    console.log("Intervalo de atualização do dashboard configurado para 5 segundos.");
+    // Initial data load and periodic updates
+    fetchLatestData();
+    fetchHistoryData();
+    setInterval(fetchLatestData, 5000); // Update every 5 seconds
 });

@@ -1,41 +1,38 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Monitor de Água - Versão ULTRA-COMPATÍVEL (Tanque Único 40.000L)
-Otimizado para o Render com detecção automática de porta e logs.
-"""
-
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-from flask_cors import CORS
-import json
-import sqlite3
 import os
-import sys
 from datetime import datetime, timedelta
-import hashlib
+import json
 import logging
+import sqlite3
+
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, g
+from flask_cors import CORS
 
 # Configuração de Logs para o Render
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'water-monitor-ultra-2024')
+app = Flask(__name__, static_folder='static', template_folder='templates')
+app.secret_key = os.environ.get('SECRET_KEY', 'condominio-colina-dos-cedros-2024')
 
-# CORS configurado para aceitar requisições do Render
+# CORS configurado para aceitar requisições de qualquer origem
 CORS(app, origins="*", allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
-# CONFIGURAÇÕES FORÇADAS (40.000L)
+# CONFIGURAÇÕES FIXAS DO RESERVATÓRIO PRINCIPAL (40.000L)
 TANK_CONFIG = {
     'name': 'Reservatório Principal',
-    'tank_height': 1000,   # 10 metros
-    'tank_width': 200,     # 2 metros
-    'tank_length': 200,    # 2 metros
-    'dead_zone': 10,       # 10 cm
-    'total_volume': 40000  # 40.000 Litros
+    'tank_height': 200,  # Altura física do tanque em cm
+    'tank_width': 200,   # Largura do tanque em cm
+    'tank_length': 100,  # Comprimento do tanque em cm
+    'sensor_offset': 30, # Distância do sensor à superfície da água quando o tanque está 100% cheio (em cm)
+    'empty_distance': 200, # Distância do sensor ao fundo do tanque quando vazio (em cm)
+    'low_alert_threshold': 20, # % de nível para alerta baixo
+    'high_alert_threshold': 100 # % de nível para alerta alto (para transbordamento)
 }
 
-# Estado atual em memória
+# Calcula o volume total em litros com base nas dimensões e ajusta para 40.000L
+TANK_CONFIG['total_volume'] = 40000 # Litros
+
+# Estado atual em memória (apenas para o Reservatório Principal)
 current_data = {
     'tank_id': 'tank1',
     'level_percentage': 0,
@@ -66,23 +63,33 @@ def init_database():
     except Exception as e:
         logger.error(f"Erro ao inicializar banco de dados: {e}")
 
-def calculate_data(distance_cm, status='online', tank_id='tank1'):
-    h = TANK_CONFIG['tank_height']
-    dz = TANK_CONFIG['dead_zone']
-    vol = TANK_CONFIG['total_volume']
+def calculate_data(distance_from_sensor_cm, status='online', tank_id='tank1'):
+    # Usamos as configurações fixas
+    full_at_cm = TANK_CONFIG['sensor_offset'] # Distância do sensor quando 100% cheio
+    empty_at_cm = TANK_CONFIG['empty_distance'] # Distância do sensor quando 0% cheio
+    total_volume = TANK_CONFIG['total_volume'] # Volume total em litros
 
-    water_height = h - distance_cm - dz
-    if water_height < 0: water_height = 0
-    
-    percentage = (water_height / (h - dz)) * 100
-    if percentage > 100: percentage = 100
+    # Altura útil máxima da água (do ponto de 100% ao ponto de 0%) = empty_at_cm - full_at_cm
+    max_water_height = empty_at_cm - full_at_cm
+
+    # Altura atual da água em relação ao ponto de 0% (base do tanque)
+    current_water_height = empty_at_cm - distance_from_sensor_cm
+
+    # Calcular porcentagem
+    if max_water_height <= 0: # Evitar divisão por zero ou valores inválidos
+        percentage = 0
+    else:
+        percentage = (current_water_height / max_water_height) * 100
+
+    # Ajustes para transbordamento e vazio
     if percentage < 0: percentage = 0
 
-    liters = (percentage / 100) * vol
+    liters = (percentage / 100) * total_volume
+    if liters < 0: liters = 0
 
     return {
         'tank_id': 'tank1',
-        'distance_cm': round(distance_cm, 2),
+        'distance_cm': round(distance_from_sensor_cm, 2),
         'level_percentage': round(percentage, 2),
         'volume_liters': round(liters, 2),
         'status': status,
@@ -124,11 +131,13 @@ def receive_data():
         dist = float(data.get('distance_cm', 0))
         status = data.get('status', 'online')
         
-                incoming_tank_id = data.get('tank_id', 'tank1')
-        # Mapeia 'tanque1' para 'tank1' para consistência interna
-        tank_id_to_process = 'tank1' if incoming_tank_id == 'tanque1' else incoming_tank_id
-        
-        current_data = calculate_data(dist, status, tank_id_to_process)
+        # Garante que o tank_id seja sempre 'tank1' para processamento
+        incoming_tank_id = data.get("tank_id", "tank1")
+        if incoming_tank_id not in ['tank1', 'tanque1']:
+            logger.warning(f"Dados recebidos para tank_id desconhecido: {incoming_tank_id}. Ignorando.")
+            return jsonify({"status": "error", "message": "Tank ID desconhecido"}), 400
+
+        current_data = calculate_data(dist, status, 'tank1') # Força para tank1
         
         conn = sqlite3.connect('water_monitor.db')
         c = conn.cursor()
@@ -138,8 +147,8 @@ def receive_data():
         conn.commit()
         conn.close()
         
-        logger.info(f"Dados recebidos: {dist}cm -> {current_data['volume_liters']}L")
-        return jsonify({"status": "success", "tank": "tank1", "volume": current_data['volume_liters']})
+        logger.info(f"Dados recebidos para {current_data['tank_id']}: {dist}cm -> {current_data['volume_liters']}L")
+        return jsonify({"status": "success", "tank": current_data['tank_id'], "volume": current_data['volume_liters']})
     except Exception as e:
         logger.error(f"Erro ao receber dados: {e}")
         return jsonify({"status": "error", "message": str(e)}), 400
@@ -148,14 +157,6 @@ def receive_data():
 @app.route('/api/latest/tank1')
 def get_latest():
     return jsonify(current_data)
-
-@app.route('/api/settings', methods=['GET', 'POST'])
-def handle_settings():
-    return jsonify({
-        'tanks': {
-            'tank1': TANK_CONFIG
-        }
-    })
 
 @app.route('/api/history')
 def get_history():
@@ -174,9 +175,9 @@ def get_history():
 def health_check():
     return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
 
-if __name__ == '__main__':
-    init_database()
-    # Detecção de porta para o Render
-    port = int(os.environ.get('PORT', 5000))
-    logger.info(f"Iniciando servidor na porta {port}...")
-    app.run(host='0.0.0.0', port=port)
+# A função init_database() será chamada antes da primeira requisição
+@app.before_request
+def before_request_func():
+    if not hasattr(g, 'db_initialized'):
+        init_database()
+        g.db_initialized = True

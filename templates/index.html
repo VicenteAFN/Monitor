@@ -1,90 +1,596 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor de Água - Reservatório Principal</title>
-    <link rel="stylesheet" href="{{ url_for("static", filename="css/style.css") }}">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💧</text></svg>">
+    <title>Condomínio Colina dos Cedros - Monitoramento de Água</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        /* Estilos Gerais */
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+
+        .sidebar .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .sidebar .logo img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin-bottom: 10px;
+            border: 3px solid #007bff;
+        }
+
+        .sidebar .logo h1 {
+            font-size: 1.5rem;
+            margin: 0;
+            color: #fff;
+        }
+
+        .sidebar .main-nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+        }
+
+        .sidebar .main-nav li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar .main-nav .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            color: #ecf0f1;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .sidebar .main-nav .nav-item i {
+            margin-right: 10px;
+        }
+
+        .sidebar .main-nav .nav-item:hover,
+        .sidebar .main-nav .nav-item.active {
+            background-color: #34495e;
+            color: #ffffff;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex-grow: 1;
+            padding: 20px;
+            background-color: #ecf0f1;
+        }
+
+        .main-content header {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .main-content header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: #333;
+        }
+
+        .status-area {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .status-area #status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background-color: #ccc; /* Default */
+        }
+
+        .status-area #status-indicator.status-online {
+            background-color: #28a745;
+        }
+
+        .status-area #status-indicator.status-offline {
+            background-color: #dc3545;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Dashboard */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .main-tank-card h2 {
+            margin-top: 0;
+            color: #007bff;
+            text-align: center;
+        }
+
+        .tank-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .tank-outline {
+            position: relative;
+            width: 150px;
+            height: 300px;
+            border: 5px solid #007bff;
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: #e0f2f7; /* Cor do tanque vazio */
+        }
+
+        .water-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #007bff; /* Cor da água */
+            transition: height 1s ease-out, background-color 0.5s ease;
+            border-radius: 0 0 5px 5px;
+        }
+
+        .water-level-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+            z-index: 10;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.7);
+        }
+
+        .tank-info p {
+            margin: 5px 0;
+            font-size: 1.1em;
+        }
+
+        .tank-info p strong {
+            margin-right: 5px;
+        }
+
+        .alert-message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .alert-message.alert-low {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-message.alert-high {
+            background-color: #fff3cd;
+            color: #856407;
+            border: 1px solid #ffeeba;
+        }
+
+        .alert-message.alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* History */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                padding: 15px;
+                flex-direction: row;
+                justify-content: space-around;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+
+            .sidebar .logo {
+                margin-bottom: 0;
+                margin-right: 20px;
+            }
+
+            .sidebar .logo img {
+                width: 50px;
+                height: 50px;
+            }
+
+            .sidebar .logo h1 {
+                font-size: 1.2rem;
+            }
+
+            .sidebar .main-nav ul {
+                flex-direction: row;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            .sidebar .main-nav li {
+                margin: 0 10px;
+            }
+
+            .sidebar .main-nav .nav-item {
+                padding: 8px 12px;
+            }
+
+            .main-content {
+                padding: 15px;
+            }
+
+            .main-content header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .main-content header h1 {
+                margin-bottom: 10px;
+            }
+
+            .tank-outline {
+                width: 120px;
+                height: 240px;
+            }
+
+            .water-level-text {
+                font-size: 1.8em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sidebar .logo {
+                display: none;
+            }
+
+            .sidebar .main-nav ul {
+                width: 100%;
+                justify-content: space-around;
+            }
+
+            .sidebar .main-nav li {
+                margin: 0 5px;
+            }
+
+            .sidebar .main-nav .nav-item span {
+                display: none;
+            }
+
+            .sidebar .main-nav .nav-item i {
+                margin: 0;
+            }
+
+            .main-content header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Monitor de Água</h1>
-            <nav>
-                <a href="#dashboard" class="active">Dashboard</a>
-                <a href="#history">Histórico</a>
-                <a href="#settings">Configurações</a>
-                <a href="/logout">Sair</a>
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="{{ url_for("static", filename="images/logo.png") }}" alt="Logo">
+                <h1>Colina dos Cedros</h1>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="#" class="nav-item active" data-tab="dashboard"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a></li>
+                    <li><a href="#" class="nav-item" data-tab="history"><i class="fas fa-chart-line"></i> <span>Histórico</span></a></li>
+                    <li><a href="/logout" class="nav-item"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a></li>
+                </ul>
             </nav>
-        </header>
+        </aside>
 
-        <main>
+        <main class="main-content">
+            <header>
+                <h1>Monitoramento de Água</h1>
+                <div class="status-area">
+                    <span id="status-indicator" class="status-offline"></span>
+                    <span id="status-text">Offline</span>
+                </div>
+            </header>
+
             <section id="dashboard" class="tab-content active">
-                <h2>Reservatório Principal</h2>
-                <div class="tank-container">
-                    <div class="tank" id="tank1-display">
-                        <div class="water" id="tank1-water"></div>
-                        <div class="level-text" id="tank1-level-text">0%</div>
-                    </div>
-                    <div class="tank-info">
-                        <p>Volume: <span id="tank1-volume">0 L</span></p>
-                        <p>Distância: <span id="tank1-distance">0 cm</span></p>
-                        <p>Status: <span id="tank1-status" class="status-offline">Offline</span></p>
-                        <p>Última Atualização: <span id="tank1-timestamp">--</span></p>
-                        <div class="alert-message" id="tank1-alert"></div>
+                <div class="dashboard-grid">
+                    <div class="card main-tank-card">
+                        <h2>Reservatório Principal</h2>
+                        <div class="tank-display">
+                            <div class="tank-outline">
+                                <div id="tank1-water-fill" class="water-fill"></div>
+                                <div class="water-level-text">
+                                    <span id="tank1-level-percentage">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tank-info">
+                            <p><strong>Nome:</strong> <span id="tank1-name">Reservatório Principal</span></p>
+                            <p><strong>Nível:</strong> <span id="tank1-level-text">0%</span></p>
+                            <p><strong>Volume:</strong> <span id="tank1-volume-liters">0 L</span></p>
+                            <p><strong>Distância:</strong> <span id="tank1-distance-cm">0 cm</span></p>
+                            <p><strong>Última Atualização:</strong> <span id="tank1-timestamp">--</span></p>
+                        </div>
+                        <div id="tank1-alert" class="alert-message"></div>
                     </div>
                 </div>
             </section>
 
             <section id="history" class="tab-content">
-                <h2>Histórico do Reservatório Principal</h2>
-                <canvas id="tank1Chart"></canvas>
-            </section>
-
-            <section id="settings" class="tab-content">
-                <h2>Configurações do Reservatório Principal</h2>
-                <form id="settingsForm">
-                    <div class="form-group">
-                        <label for="tank1_name">Nome do Reservatório:</label>
-                        <input type="text" id="tank1_name" name="tank1_name" value="Reservatório Principal" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="tank1_height">Altura (cm):</label>
-                        <input type="number" id="tank1_height" name="tank1_height" value="1000" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="tank1_width">Largura (cm):</label>
-                        <input type="number" id="tank1_width" name="tank1_width" value="200" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="tank1_length">Comprimento (cm):</label>
-                        <input type="number" id="tank1_length" name="tank1_length" value="200" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="tank1_dead_zone">Zona Morta (cm):</label>
-                        <input type="number" id="tank1_dead_zone" name="tank1_dead_zone" value="10" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="tank1_total_volume">Volume Total (L):</label>
-                        <input type="number" id="tank1_total_volume" name="tank1_total_volume" value="40000" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="tank1_low_alert_threshold">Alerta Nível Baixo (%):</label>
-                        <input type="number" id="tank1_low_alert_threshold" name="tank1_low_alert_threshold" value="20">
-                    </div>
-                    <div class="form-group">
-                        <label for="tank1_high_alert_threshold">Alerta Nível Alto (%):</label>
-                        <input type="number" id="tank1_high_alert_threshold" name="tank1_high_alert_threshold" value="90">
-                    </div>
-                    <button type="submit">Salvar Configurações</button>
-                    <div id="settingsMessage" class="message"></div>
-                </form>
+                <h2>Histórico de Nível e Volume</h2>
+                <div class="chart-container">
+                    <canvas id="tank1Chart"></canvas>
+                </div>
             </section>
         </main>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="{{ url_for("static", filename="js/main.js") }}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0/dist/chartjs-adapter-moment.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const navItems = document.querySelectorAll('.main-nav .nav-item');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            // Activate default tab (Dashboard) and hide others
+            document.getElementById('dashboard').classList.add('active');
+            document.querySelector('.main-nav .nav-item[data-tab="dashboard"]').classList.add('active');
+
+            navItems.forEach(item => {
+                item.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const targetTab = this.dataset.tab;
+
+                    // Remove active class from all nav items and add to clicked one
+                    navItems.forEach(link => link.classList.remove('active'));
+                    this.classList.add('active');
+
+                    // Hide all tab contents and show the target one
+                    tabContents.forEach(content => {
+                        if (content.id === targetTab) {
+                            content.classList.add('active');
+                        } else {
+                            content.classList.remove('active');
+                        }
+                    });
+
+                    // If switching to history tab, fetch history data
+                    if (targetTab === 'history') {
+                        fetchHistoryData();
+                    }
+                });
+            });
+
+            const tank1WaterFill = document.getElementById('tank1-water-fill');
+            const tank1LevelPercentage = document.getElementById('tank1-level-percentage');
+            const tank1LevelText = document.getElementById('tank1-level-text');
+            const tank1VolumeLiters = document.getElementById('tank1-volume-liters');
+            const tank1DistanceCm = document.getElementById('tank1-distance-cm');
+            const tank1Timestamp = document.getElementById('tank1-timestamp');
+            const tank1Alert = document.getElementById('tank1-alert');
+            const statusIndicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+
+            let tank1Chart;
+
+            function updateDashboard(data) {
+                console.log('Dados recebidos para atualização do dashboard:', data);
+
+                // Check if data is valid and contains tank1 information
+                if (data && data.tank_id === 'tank1') {
+                    const percentage = parseFloat(data.level_percentage);
+                    const volume = parseFloat(data.volume_liters);
+                    const distance = parseFloat(data.distance_cm);
+                    const timestamp = data.timestamp;
+                    const status = data.status;
+
+                    // Update tank visual
+                    tank1WaterFill.style.height = `${Math.min(100, Math.max(0, percentage))}%`;
+                    tank1LevelPercentage.textContent = `${percentage.toFixed(1)}%`;
+                    tank1LevelText.textContent = `${percentage.toFixed(1)}%`;
+                    tank1VolumeLiters.textContent = `${volume.toFixed(2)} L`;
+                    tank1DistanceCm.textContent = `${distance.toFixed(2)} cm`;
+                    tank1Timestamp.textContent = moment(timestamp).format('DD/MM/YYYY HH:mm:ss');
+
+                    // Color and alert logic
+                    if (percentage < 20) {
+                        tank1WaterFill.style.backgroundColor = '#dc3545'; // Red
+                        tank1Alert.className = 'alert-message alert-low';
+                        tank1Alert.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Nível muito baixo! Abastecer!';
+                    } else if (percentage > 100) {
+                        tank1WaterFill.style.backgroundColor = '#ffc107'; // Yellow
+                        tank1Alert.className = 'alert-message alert-high';
+                        tank1Alert.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Nível acima de 100%! Possível transbordamento ou sensor descalibrado.';
+                    } else {
+                        tank1WaterFill.style.backgroundColor = '#007bff'; // Blue
+                        tank1Alert.className = 'alert-message';
+                        tank1Alert.innerHTML = '';
+                    }
+
+                    // Update online/offline status
+                    if (status === 'online') {
+                        statusIndicator.classList.remove('status-offline');
+                        statusIndicator.classList.add('status-online');
+                        statusText.textContent = 'Online';
+                    } else {
+                        statusIndicator.classList.remove('status-online');
+                        statusIndicator.classList.add('status-offline');
+                        statusText.textContent = 'Offline';
+                    }
+                } else {
+                    console.warn('Dados inválidos ou sem tank_id=tank1 para atualização do dashboard.');
+                    // If data is invalid, set status to offline and show error
+                    statusIndicator.classList.remove('status-online');
+                    statusIndicator.classList.add('status-offline');
+                    statusText.textContent = 'Offline';
+                    if (document.getElementById('tank1-alert')) {
+                        document.getElementById('tank1-alert').className = 'alert-message alert-error';
+                        document.getElementById('tank1-alert').innerHTML = '<i class="fas fa-exclamation-circle"></i> Erro de conexão ou dados. Verifique o sensor.';
+                    }
+                }
+            }
+
+            async function fetchLatestData() {
+                console.log('Buscando dados mais recentes...');
+                try {
+                    const response = await fetch('/api/latest');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    console.log('Dados mais recentes recebidos:', data);
+                    updateDashboard(data);
+                } catch (error) {
+                    console.error('Erro ao buscar dados mais recentes:', error);
+                    // In case of error, ensure status is offline and show error message
+                    statusIndicator.classList.remove('status-online');
+                    statusIndicator.classList.add('status-offline');
+                    statusText.textContent = 'Offline';
+                    if (document.getElementById('tank1-alert')) {
+                        document.getElementById('tank1-alert').className = 'alert-message alert-error';
+                        document.getElementById('tank1-alert').innerHTML = '<i class="fas fa-exclamation-circle"></i> Erro de conexão ou dados. Verifique o sensor.';
+                    }
+                }
+            }
+
+            async function fetchHistoryData() {
+                console.log('Buscando dados históricos...');
+                try {
+                    const response = await fetch('/api/history');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const historyData = await response.json();
+                    console.log('Dados históricos recebidos:', historyData);
+                    updateChart(historyData);
+                } catch (error) {
+                    console.error('Erro ao buscar dados históricos:', error);
+                }
+            }
+
+            function updateChart(data) {
+                const labels = data.map(item => moment(item.timestamp).format('HH:mm'));
+                const percentages = data.map(item => item.level_percentage);
+
+                if (tank1Chart) {
+                    tank1Chart.destroy();
+                }
+
+                const ctx = document.getElementById('tank1Chart').getContext('2d');
+                tank1Chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Nível (%)',
+                            data: percentages,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'minute',
+                                    tooltipFormat: 'HH:mm:ss'
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Hora'
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Nível (%)'
+                                },
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Initial data load and periodic updates
+            fetchLatestData();
+            fetchHistoryData();
+            setInterval(fetchLatestData, 5000); // Update every 5 seconds
+        });
+    </script>
 </body>
 </html>
