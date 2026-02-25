@@ -66,7 +66,7 @@ def init_database():
     except Exception as e:
         logger.error(f"Erro ao inicializar banco de dados: {e}")
 
-def calculate_data(distance_cm, status='online'):
+def calculate_data(distance_cm, status='online', tank_id='tank1'):
     h = TANK_CONFIG['tank_height']
     dz = TANK_CONFIG['dead_zone']
     vol = TANK_CONFIG['total_volume']
@@ -124,7 +124,11 @@ def receive_data():
         dist = float(data.get('distance_cm', 0))
         status = data.get('status', 'online')
         
-        current_data = calculate_data(dist, status)
+                incoming_tank_id = data.get('tank_id', 'tank1')
+        # Mapeia 'tanque1' para 'tank1' para consistência interna
+        tank_id_to_process = 'tank1' if incoming_tank_id == 'tanque1' else incoming_tank_id
+        
+        current_data = calculate_data(dist, status, tank_id_to_process)
         
         conn = sqlite3.connect('water_monitor.db')
         c = conn.cursor()

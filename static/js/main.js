@@ -1,211 +1,24 @@
 /**
- * Monitor de Água - JavaScript Principal
- * Arquivo com funções auxiliares e utilitários
+ * Monitor de Água - JavaScript Principal (Condomínio Colina dos Cedros)
+ * Lógica de frontend para o Reservatório Principal com design moderno.
  */
 
 // Utilitários para formatação
 const Utils = {
-    /**
-     * Formata um número para exibição com casas decimais
-     */
     formatNumber: function(number, decimals = 1) {
         return parseFloat(number).toFixed(decimals);
     },
-    
-    /**
-     * Formata uma data para exibição em português
-     */
     formatDate: function(dateString) {
         const date = new Date(dateString);
-        return date.toLocaleString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+        return date.toLocaleString("pt-BR", {
+            day: "2-digit", month: "2-digit", year: "numeric",
+            hour: "2-digit", minute: "2-digit", second: "2-digit"
         });
-    },
-    
-    /**
-     * Formata uma data para exibição curta (apenas hora)
-     */
-    formatTime: function(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    },
-    
-    /**
-     * Determina a cor baseada no nível de água
-     */
-    getLevelColor: function(percentage) {
-        if (percentage >= 70) return 'success';
-        if (percentage >= 30) return 'warning';
-        return 'danger';
-    },
-    
-    /**
-     * Determina o status textual baseado no nível
-     */
-    getLevelStatus: function(percentage) {
-        if (percentage >= 70) return 'Nível Alto';
-        if (percentage >= 30) return 'Nível Normal';
-        return 'Nível Baixo';
-    }
-};
-
-// Funções de notificação
-const Notifications = {
-    /**
-     * Mostra uma notificação toast
-     */
-    show: function(message, type = 'info') {
-        // Cria elemento de toast se não existir
-        let toastContainer = document.getElementById('toast-container');
-        if (!toastContainer) {
-            toastContainer = document.createElement('div');
-            toastContainer.id = 'toast-container';
-            toastContainer.className = 'position-fixed top-0 end-0 p-3';
-            toastContainer.style.zIndex = '1050';
-            document.body.appendChild(toastContainer);
-        }
-        
-        // Cria o toast
-        const toastId = 'toast-' + Date.now();
-        const toast = document.createElement('div');
-        toast.id = toastId;
-        toast.className = `toast align-items-center text-white bg-${type} border-0`;
-        toast.setAttribute('role', 'alert');
-        toast.innerHTML = `
-            <div class="d-flex">
-                <div class="toast-body">
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        `;
-        
-        toastContainer.appendChild(toast);
-        
-        // Inicializa e mostra o toast
-        const bsToast = new bootstrap.Toast(toast);
-        bsToast.show();
-        
-        // Remove o toast após ser ocultado
-        toast.addEventListener('hidden.bs.toast', function() {
-            toast.remove();
-        });
-    }
-};
-
-// Funções de validação
-const Validation = {
-    /**
-     * Valida se um valor é um número positivo
-     */
-    isPositiveNumber: function(value) {
-        return !isNaN(value) && parseFloat(value) > 0;
-    },
-    
-    /**
-     * Valida se um valor está dentro de um intervalo
-     */
-    isInRange: function(value, min, max) {
-        const num = parseFloat(value);
-        return !isNaN(num) && num >= min && num <= max;
-    },
-    
-    /**
-     * Valida configurações do tanque
-     */
-    validateTankSettings: function(settings) {
-        const errors = [];
-        
-        if (!this.isPositiveNumber(settings.tank_height)) {
-            errors.push('Altura da caixa deve ser um número positivo');
-        }
-        
-        if (!this.isPositiveNumber(settings.tank_width)) {
-            errors.push('Largura da caixa deve ser um número positivo');
-        }
-        
-        if (!this.isPositiveNumber(settings.tank_length)) {
-            errors.push('Comprimento da caixa deve ser um número positivo');
-        }
-        
-        if (!this.isPositiveNumber(settings.dead_zone)) {
-            errors.push('Zona morta deve ser um número positivo');
-        }
-        
-        if (!this.isPositiveNumber(settings.total_volume)) {
-            errors.push('Volume total deve ser um número positivo');
-        }
-        
-        if (!this.isInRange(settings.low_alert_threshold, 0, 100)) {
-            errors.push('Alerta de nível baixo deve estar entre 0 e 100');
-        }
-        
-        if (!this.isInRange(settings.high_alert_threshold, 0, 100)) {
-            errors.push('Alerta de nível alto deve estar entre 0 e 100');
-        }
-        
-        if (settings.low_alert_threshold >= settings.high_alert_threshold) {
-            errors.push('Alerta de nível baixo deve ser menor que o alerta de nível alto');
-        }
-        
-        return errors;
-    }
-};
-
-// Funções de armazenamento local
-const Storage = {
-    /**
-     * Salva dados no localStorage
-     */
-    set: function(key, value) {
-        try {
-            localStorage.setItem(key, JSON.stringify(value));
-            return true;
-        } catch (error) {
-            console.error('Erro ao salvar no localStorage:', error);
-            return false;
-        }
-    },
-    
-    /**
-     * Recupera dados do localStorage
-     */
-    get: function(key, defaultValue = null) {
-        try {
-            const item = localStorage.getItem(key);
-            return item ? JSON.parse(item) : defaultValue;
-        } catch (error) {
-            console.error('Erro ao ler do localStorage:', error);
-            return defaultValue;
-        }
-    },
-    
-    /**
-     * Remove dados do localStorage
-     */
-    remove: function(key) {
-        try {
-            localStorage.removeItem(key);
-            return true;
-        } catch (error) {
-            console.error('Erro ao remover do localStorage:', error);
-            return false;
-        }
     }
 };
 
 // Funções de API
 const API = {
-    /**
-     * Faz uma requisição GET
-     */
     get: async function(url) {
         try {
             const response = await fetch(url);
@@ -214,216 +27,110 @@ const API = {
             }
             return await response.json();
         } catch (error) {
-            console.error('Erro na requisição GET:', error);
+            console.error("Erro na requisição GET para " + url + ":", error);
             throw error;
         }
     },
-    
-    /**
-     * Faz uma requisição POST
-     */
     post: async function(url, data) {
         try {
             const response = await fetch(url, {
-                method: 'POST',
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json'
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify(data)
             });
-            
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
             return await response.json();
         } catch (error) {
-            console.error('Erro na requisição POST:', error);
+            console.error("Erro na requisição POST para " + url + ":", error);
             throw error;
         }
     }
 };
 
-// Funções de animação
-const Animation = {
-    /**
-     * Anima um elemento com fade-in
-     */
-    fadeIn: function(element, duration = 300) {
-        element.style.opacity = '0';
-        element.style.display = 'block';
-        
-        let start = null;
-        function animate(timestamp) {
-            if (!start) start = timestamp;
-            const progress = timestamp - start;
-            
-            element.style.opacity = Math.min(progress / duration, 1);
-            
-            if (progress < duration) {
-                requestAnimationFrame(animate);
-            }
-        }
-        
-        requestAnimationFrame(animate);
-    },
-    
-    /**
-     * Anima um elemento com fade-out
-     */
-    fadeOut: function(element, duration = 300) {
-        let start = null;
-        function animate(timestamp) {
-            if (!start) start = timestamp;
-            const progress = timestamp - start;
-            
-            element.style.opacity = Math.max(1 - (progress / duration), 0);
-            
-            if (progress < duration) {
-                requestAnimationFrame(animate);
-            } else {
-                element.style.display = 'none';
-            }
-        }
-        
-        requestAnimationFrame(animate);
-    },
-    
-    /**
-     * Anima o preenchimento do tanque
-     */
-    animateTank: function(targetPercentage, duration = 1000) {
-        const waterFill = document.getElementById('water-fill');
-        if (!waterFill) return;
-        
-        const startPercentage = parseFloat(waterFill.style.height) || 0;
-        const difference = targetPercentage - startPercentage;
-        
-        let start = null;
-        function animate(timestamp) {
-            if (!start) start = timestamp;
-            const progress = Math.min((timestamp - start) / duration, 1);
-            
-            const currentPercentage = startPercentage + (difference * progress);
-            waterFill.style.height = currentPercentage + '%';
-            
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            }
-        }
-        
-        requestAnimationFrame(animate);
-    }
-};
-
-// Inicialização global
-document.addEventListener('DOMContentLoaded', function() {
-    // Inicializa tooltips do Bootstrap
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function(tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-    
-    // Inicializa popovers do Bootstrap
-    const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-    popoverTriggerList.map(function(popoverTriggerEl) {
-        return new bootstrap.Popover(popoverTriggerEl);
-    });
-    
-    // Adiciona classe fade-in aos cards
-    const cards = document.querySelectorAll('.card');
-    cards.forEach((card, index) => {
-        setTimeout(() => {
-            card.classList.add('fade-in');
-        }, index * 100);
-    });
-});
-
-// Exporta funções para uso global
-window.Utils = Utils;
-window.Notifications = Notifications;
-window.Validation = Validation;
-window.Storage = Storage;
-window.API = API;
-window.Animation = Animation;
-
-
+// Variável global para o gráfico
+let tank1ChartInstance;
 
 // Função para carregar histórico e exibir gráfico
 async function loadHistory() {
     try {
-        const response = await API.get("/api/history");
+        const response = await API.get("/api/history?tank_id=tank1");
         const data = response.reverse(); // Inverte para ter os dados mais antigos primeiro
-        console.log("Dados recebidos da API /api/history:", data);
 
-        const ctx = document.getElementById("historyChart").getContext("2d");
-        console.log("Contexto do gráfico (ctx):", ctx);
+        const ctx = document.getElementById("tank1Chart").getContext("2d");
 
-        // Prepara dados para o gráfico
         const chartData = data.map(item => ({
             x: new Date(item.timestamp),
             level: item.level_percentage,
             volume: item.volume_liters
         }));
-        console.log("Dados formatados para o gráfico (chartData):", chartData);
 
-        if (historyChart) {
-            historyChart.destroy();
+        if (tank1ChartInstance) {
+            tank1ChartInstance.destroy();
         }
-        console.log("Inicializando novo Chart com os dados:", chartData);
-        historyChart = new Chart(ctx, {
-            type: 'line',
+        tank1ChartInstance = new Chart(ctx, {
+            type: "line",
             data: {
                 datasets: [{
-                    label: 'Nível (%)',
+                    label: "Nível (%)",
                     data: chartData.map(item => ({ x: item.x, y: item.level })),
-                    borderColor: '#007bff',
-                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                    yAxisID: 'y'
+                    borderColor: "#007bff",
+                    backgroundColor: "rgba(0, 123, 255, 0.1)",
+                    yAxisID: "y"
                 }, {
-                    label: 'Volume (L)',
+                    label: "Volume (L)",
                     data: chartData.map(item => ({ x: item.x, y: item.volume })),
-                    borderColor: '#28a745',
-                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                    yAxisID: 'y1'
+                    borderColor: "#28a745",
+                    backgroundColor: "rgba(40, 167, 69, 0.1)",
+                    yAxisID: "y1"
                 }]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     x: {
-                        type: 'time',
+                        type: "time",
                         time: {
-                            unit: 'hour',
-                            tooltipFormat: 'DD/MM/YYYY HH:mm'
+                            unit: "hour",
+                            tooltipFormat: "dd/MM/yyyy HH:mm:ss"
                         },
                         title: {
                             display: true,
-                            text: 'Data'
+                            text: "Data"
                         }
                     },
                     y: {
-                        type: 'linear',
+                        type: "linear",
                         display: true,
-                        position: 'left',
+                        position: "left",
                         min: 0,
-                        max: 100,
+                        max: 120, // Pode ir acima de 100% para mostrar transbordo
                         title: {
                             display: true,
-                            text: 'Nível (%)'
+                            text: "Nível (%)"
                         }
                     },
                     y1: {
-                        type: 'linear',
+                        type: "linear",
                         display: true,
-                        position: 'right',
+                        position: "right",
                         title: {
                             display: true,
-                            text: 'Volume (L)'
+                            text: "Volume (L)"
                         },
                         grid: {
                             drawOnChartArea: false,
                         },
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
                     }
                 }
             }
@@ -433,123 +140,175 @@ async function loadHistory() {
     }
 }
 
-// Exporta funções para uso global
-window.Utils = Utils;
-window.Notifications = Notifications;
-window.Validation = Validation;
-window.Storage = Storage;
-window.API = API;
-window.Animation = Animation;
-window.loadHistory = loadHistory;
-
-
-
-
-
-// Função para atualizar o dashboard com os dados mais recentes
-
-
-
-
-
 // Função para atualizar o dashboard com os dados mais recentes
 async function updateDashboard() {
+    console.log("Iniciando updateDashboard...");
     try {
-        const data = await API.get("/api/latest");
-        if (data) {
-            // Atualiza os elementos do dashboard
-            document.getElementById("water-level").innerText = Utils.formatNumber(data.level_percentage, 1) + "%";
-            document.getElementById("volume").innerText = Utils.formatNumber(data.volume_liters, 0) + " L";
-            document.getElementById("distance").innerText = Utils.formatNumber(data.distance_cm, 1) + " cm";
-            document.getElementById("last-update").innerText = Utils.formatDate(data.timestamp);
+        console.log("Buscando dados de /api/latest/tank1...");
+        const data = await API.get("/api/latest/tank1");
+        console.log("Dados recebidos de /api/latest/tank1:", data);
+        console.log("Buscando configurações de /api/settings...");
+        const settings = await API.get("/api/settings");
+        console.log("Configurações recebidas de /api/settings:", settings);
+        const tank1Settings = settings.tanks.tank1;
 
-            // Atualiza o status
-            const statusElement = document.getElementById("system-status");
+        if (data) {
+            console.log("Atualizando elementos do dashboard com dados:", data);
+            // Atualiza os elementos do dashboard
+            document.getElementById("tank1-level-text").innerText = Utils.formatNumber(data.level_percentage, 1) + "%";
+            document.getElementById("tank1-volume").innerText = Utils.formatNumber(data.volume_liters, 0) + " L";
+            document.getElementById("tank1-distance").innerText = Utils.formatNumber(data.distance_cm, 1) + " cm";
+            document.getElementById("tank1-timestamp").innerText = Utils.formatDate(data.timestamp);
+
+            // Atualiza o status do indicador
+            const statusIndicator = document.getElementById("tank1-status-indicator");
+            const statusText = document.getElementById("tank1-status-text");
             if (data.status === "online") {
-                statusElement.querySelector("span").innerText = "Online";
-                statusElement.classList.remove("text-danger");
-                statusElement.classList.add("text-success");
+                statusText.innerText = "Online";
+                statusIndicator.classList.remove("status-offline");
+                statusIndicator.classList.add("status-online");
             } else {
-                statusElement.querySelector("span").innerText = "Offline";
-                statusElement.classList.remove("text-success");
-                statusElement.classList.add("text-danger");
+                statusText.innerText = "Offline";
+                statusIndicator.classList.remove("status-online");
+                statusIndicator.classList.add("status-offline");
             }
 
             // Anima o tanque
-            Animation.animateTank(data.level_percentage);
+            const waterFill = document.getElementById("tank1-water");
+            let displayPercentage = Math.min(Math.max(data.level_percentage, 0), 100); // Limita para exibição visual
+            waterFill.style.height = displayPercentage + "%";
 
-            // Atualiza o status do nível
-            const levelStatus = document.getElementById("level-status");
-            if (data.level_percentage >= 70) {
-                levelStatus.textContent = "Nível Alto";
-                levelStatus.className = "text-success";
-            } else if (data.level_percentage >= 30) {
-                levelStatus.textContent = "Nível Normal";
-                levelStatus.className = "text-warning";
-            } else {
-                levelStatus.textContent = "Nível Baixo";
-                levelStatus.className = "text-danger";
-            }
-
-            // Atualiza a cor do tanque
-            const waterFill = document.getElementById("water-fill");
-            if (data.level_percentage >= 70) {
-                waterFill.style.backgroundColor = "#28a745";
-            } else if (data.level_percentage >= 30) {
-                waterFill.style.backgroundColor = "#ffc107";
-            } else {
-                waterFill.style.backgroundColor = "#dc3545";
-            }
-
-            // Atualiza as dimensões do tanque
-            const settings = await API.get("/api/settings");
-            document.getElementById("volume-total").innerText = `de ${Utils.formatNumber(settings.total_volume, 0)} L total`;
-            document.getElementById("tank-info").innerText = `Reservatório de ${Utils.formatNumber(settings.total_volume, 0)}L`;
-            document.getElementById("tank-dimensions").innerText = `${Utils.formatNumber(settings.tank_height, 0)}cm × ${Utils.formatNumber(settings.tank_width, 0)}cm × ${Utils.formatNumber(settings.tank_length, 0)}cm`;
-
-            // Atualiza alertas
-            updateAlerts(data.level_percentage, settings.low_alert_threshold, settings.high_alert_threshold);
+            // Atualiza a cor do tanque e alertas
+            updateAlerts(data.level_percentage, tank1Settings.low_alert_threshold, tank1Settings.high_alert_threshold);
         }
     } catch (error) {
         console.error("Erro ao atualizar o dashboard:", error);
+        console.log("Tentando definir status como offline devido a erro.");
+        // Se houver erro, define o status como offline
+        const statusIndicator = document.getElementById("tank1-status-indicator");
+        const statusText = document.getElementById("tank1-status-text");
+        statusText.innerText = "Offline";
+        statusIndicator.classList.remove("status-online");
+        statusIndicator.classList.add("status-offline");
+        document.getElementById("tank1-alert").innerHTML = `<span class="alert-error">Erro de conexão com o servidor.</span>`;
     }
 }
 
 // Função para atualizar alertas
 function updateAlerts(level_percentage, low_threshold, high_threshold) {
-    const alertsContainer = document.getElementById("alerts-container");
-    alertsContainer.innerHTML = ""; // Limpa alertas existentes
+    const alertElement = document.getElementById("tank1-alert");
+    alertElement.className = "alert-message"; // Reseta classes
 
-    if (level_percentage <= low_threshold) {
-        alertsContainer.innerHTML += `
-            <div class="text-danger mb-1">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>Nível de água muito baixo!
-            </div>
-        `;
-    } else if (level_percentage >= high_threshold) {
-        alertsContainer.innerHTML += `
-            <div class="text-info mb-1">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>Nível de água muito alto!
-            </div>
-        `;
-    }
-
-    if (alertsContainer.innerHTML === "") {
-        alertsContainer.innerHTML = `
-            <div class="text-success">
-                <i class="bi bi-check-circle me-2"></i>Nenhum alerta
-            </div>
-        `;
+    if (level_percentage < low_threshold) {
+        alertElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Nível de água muito baixo! (${Utils.formatNumber(level_percentage, 1)}%)`;
+        alertElement.classList.add("alert-low");
+    } else if (level_percentage > high_threshold) {
+        alertElement.innerHTML = `<i class="fas fa-exclamation-circle"></i> **ATENÇÃO!** Nível de água acima de 100%! (${Utils.formatNumber(level_percentage, 1)}%)`;
+        alertElement.classList.add("alert-high");
+    } else {
+        alertElement.innerHTML = `<i class="fas fa-check-circle"></i> Nível normal.`;
+        alertElement.classList.add("alert-normal");
     }
 }
 
-// Atualiza o dashboard a cada 5 segundos
-setInterval(updateDashboard, 5000);
+// Função para carregar configurações e preencher o formulário
+async function loadSettingsForm() {
+    try {
+        console.log("Buscando configurações de /api/settings...");
+        const settings = await API.get("/api/settings");
+        console.log("Configurações recebidas de /api/settings:", settings);
+        const tank1Settings = settings.tanks.tank1;
 
-// Carrega os dados iniciais
-document.addEventListener("DOMContentLoaded", function() {
+        document.getElementById("tank1_name").value = tank1Settings.name;
+        document.getElementById("tank1_height").value = tank1Settings.tank_height;
+        document.getElementById("tank1_width").value = tank1Settings.tank_width;
+        document.getElementById("tank1_length").value = tank1Settings.tank_length;
+        document.getElementById("tank1_sensor_at_100_percent_cm").value = tank1Settings.sensor_at_100_percent_cm;
+        document.getElementById("tank1_sensor_at_0_percent_cm").value = tank1Settings.sensor_at_0_percent_cm;
+        document.getElementById("tank1_total_volume").value = tank1Settings.total_volume;
+        document.getElementById("tank1_low_alert_threshold").value = tank1Settings.low_alert_threshold;
+        document.getElementById("tank1_high_alert_threshold").value = tank1Settings.high_alert_threshold;
+
+    } catch (error) {
+        console.error("Erro ao carregar configurações:", error);
+    }
+}
+
+// Função para salvar configurações (apenas thresholds são editáveis)
+async function saveSettings(event) {
+    event.preventDefault();
+    const settingsMessage = document.getElementById("settingsMessage");
+    settingsMessage.innerText = "";
+    settingsMessage.className = "message";
+
+    const lowAlert = parseFloat(document.getElementById("tank1_low_alert_threshold").value);
+    const highAlert = parseFloat(document.getElementById("tank1_high_alert_threshold").value);
+
+    if (isNaN(lowAlert) || lowAlert < 0 || lowAlert > 100 || isNaN(highAlert) || highAlert < 0 || highAlert > 100) {
+        settingsMessage.className = "message error";
+        settingsMessage.innerText = "Os limites de alerta devem ser números entre 0 e 100.";
+        return;
+    }
+    if (lowAlert >= highAlert) {
+        settingsMessage.className = "message error";
+        settingsMessage.innerText = "O alerta de nível baixo deve ser menor que o alerta de nível alto.";
+        return;
+    }
+
+    try {
+        const currentSettings = await API.get("/api/settings");
+        currentSettings.tanks.tank1.low_alert_threshold = lowAlert;
+        currentSettings.tanks.tank1.high_alert_threshold = highAlert;
+        
+        const response = await API.post("/api/settings", currentSettings);
+        if (response.status === "success") {
+            settingsMessage.className = "message success";
+            settingsMessage.innerText = "Configurações salvas com sucesso!";
+            updateDashboard(); // Atualiza o dashboard com as novas configurações
+        } else {
+            settingsMessage.className = "message error";
+            settingsMessage.innerText = "Erro ao salvar configurações.";
+        }
+    } catch (error) {
+        console.error("Erro ao salvar configurações:", error);
+        settingsMessage.className = "message error";
+        settingsMessage.innerText = "Erro de comunicação com o servidor.";
+    }
+}
+
+// Event Listeners para navegação por abas
+    document.addEventListener("DOMContentLoaded", function() {
+    console.log("DOM completamente carregado.");
+    const navItems = document.querySelectorAll(".main-nav .nav-item");
+    const tabContents = document.querySelectorAll(".tab-content");
+
+    navItems.forEach(item => {
+        item.addEventListener("click", function(event) {
+            event.preventDefault();
+
+            navItems.forEach(nav => nav.classList.remove("active"));
+            tabContents.forEach(tab => tab.classList.remove("active"));
+
+            this.classList.add("active");
+            const targetId = this.getAttribute("data-tab");
+            document.getElementById(targetId).classList.add("active");
+
+            if (targetId === "history") {
+                loadHistory();
+            } else if (targetId === "settings") {
+                loadSettingsForm();
+            }
+        });
+    });
+
+    // Event listener para o formulário de configurações
+    const settingsForm = document.getElementById("settingsForm");
+    if (settingsForm) {
+        settingsForm.addEventListener("submit", saveSettings);
+    }
+
+    // Carrega os dados iniciais e atualiza o dashboard a cada 5 segundos
     updateDashboard();
-    loadHistory();
+    setInterval(updateDashboard, 5000);
+    console.log("Intervalo de atualização do dashboard configurado para 5 segundos.");
 });
-
-
