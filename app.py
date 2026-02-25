@@ -20,16 +20,16 @@ CORS(app, origins="*", allow_headers=["Content-Type", "Authorization"], methods=
 # CONFIGURAÇÕES FIXAS DO RESERVATÓRIO PRINCIPAL (40.000L)
 TANK_CONFIG = {
     'name': 'Reservatório Principal',
-    'tank_height': 200,  # Altura física do tanque em cm
+    'tank_height': 1000,  # Altura total do tanque em cm (do sensor ao fundo)
     'tank_width': 200,   # Largura do tanque em cm
-    'tank_length': 100,  # Comprimento do tanque em cm
+    'tank_length': 200,  # Comprimento do tanque em cm
     'sensor_offset': 30, # Distância do sensor à superfície da água quando o tanque está 100% cheio (em cm)
-    'empty_distance': 200, # Distância do sensor ao fundo do tanque quando vazio (em cm)
+    'empty_distance': 1000, # Distância do sensor ao fundo do tanque quando 0% cheio (em cm)
     'low_alert_threshold': 20, # % de nível para alerta baixo
     'high_alert_threshold': 100 # % de nível para alerta alto (para transbordamento)
 }
 
-# Calcula o volume total em litros com base nas dimensões e ajusta para 40.000L
+# O volume total em litros é fixo em 40.000L, conforme especificado.
 TANK_CONFIG['total_volume'] = 40000 # Litros
 
 # Estado atual em memória (apenas para o Reservatório Principal)
@@ -64,28 +64,31 @@ def init_database():
         logger.error(f"Erro ao inicializar banco de dados: {e}")
 
 def calculate_data(distance_from_sensor_cm, status='online', tank_id='tank1'):
-    # Usamos as configurações fixas
-    full_at_cm = TANK_CONFIG['sensor_offset'] # Distância do sensor quando 100% cheio
-    empty_at_cm = TANK_CONFIG['empty_distance'] # Distância do sensor quando 0% cheio
-    total_volume = TANK_CONFIG['total_volume'] # Volume total em litros
+    # Fórmulas fornecidas:
+    # P(%) = (1000 - d) / 970 * 100
+    # V_agua = (1000 - d) / 970 * 40000
 
-    # Altura útil máxima da água (do ponto de 100% ao ponto de 0%) = empty_at_cm - full_at_cm
-    max_water_height = empty_at_cm - full_at_cm
+    full_at_cm = TANK_CONFIG['sensor_offset'] # 30 cm
+    empty_at_cm = TANK_CONFIG['empty_distance'] # 1000 cm
+    total_volume = TANK_CONFIG['total_volume'] # 40000 L
 
-    # Altura atual da água em relação ao ponto de 0% (base do tanque)
-    current_water_height = empty_at_cm - distance_from_sensor_cm
+    # Calcula a faixa de distância útil
+    distance_range = float(empty_at_cm - full_at_cm) # 970 cm
 
-    # Calcular porcentagem
-    if max_water_height <= 0: # Evitar divisão por zero ou valores inválidos
+    # Calcula a porcentagem
+    if distance_range <= 0:
         percentage = 0
     else:
-        percentage = (current_water_height / max_water_height) * 100
+        percentage = ((empty_at_cm - distance_from_sensor_cm) / distance_range) * 100
 
-    # Ajustes para transbordamento e vazio
-    if percentage < 0: percentage = 0
-
+    # Calcula o volume em litros
     liters = (percentage / 100) * total_volume
-    if liters < 0: liters = 0
+
+    # Garante que os valores não sejam negativos
+    if percentage < 0:
+        percentage = 0
+    if liters < 0:
+        liters = 0
 
     return {
         'tank_id': 'tank1',
