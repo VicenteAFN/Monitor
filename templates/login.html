@@ -1,65 +1,36 @@
-{% extends "base.html" %}
-
-{% block title %}Login - Monitor de Água{% endblock %}
-
-{% block content %}
-<div class="min-vh-100 d-flex align-items-center justify-content-center bg-gradient">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-6 col-lg-4">
-                <div class="card shadow-lg border-0">
-                    <div class="card-body p-5">
-                        <div class="text-center mb-4">
-                            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
-                                <i class="bi bi-droplet-fill text-primary" style="font-size: 2rem;"></i>
-                            </div>
-                            <h2 class="fw-bold text-dark">Monitor de Água - Colina dos Cedros</h2>
-                            <p class="text-muted">Faça login para acessar o sistema</p>
-                        </div>
-                        
-                        {% if error %}
-                        <div class="alert alert-danger" role="alert">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
-                        </div>
-                        {% endif %}
-                        
-                        <form method="POST">
-                            <div class="mb-3">
-                                <label for="username" class="form-label">Usuário</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i class="bi bi-person-fill"></i>
-                                    </span>
-                                    <input type="text" class="form-control" id="username" name="username" required>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-4">
-                                <label for="password" class="form-label">Senha</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i class="bi bi-lock-fill"></i>
-                                    </span>
-                                    <input type="password" class="form-control" id="password" name="password" required>
-                                </div>
-                            </div>
-                            
-                            <button type="submit" class="btn btn-primary w-100 py-2">
-                                <i class="bi bi-box-arrow-in-right me-2"></i>Entrar
-                            </button>
-                        </form>
-                        
-                        <div class="mt-4 p-3 bg-light rounded">
-                            <small class="text-muted">
-                                <strong> Vicente Fernandes </strong><br>
-                                (47)999502463 <code> - </code><br>
-                            </small>
-                        </div>
-                    </div>
-                </div>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Monitor de Água</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f2f5; margin: 0; }
+        .login-container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { text-align: center; color: #007bff; }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; }
+        input { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 0.75rem; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; }
+        button:hover { background-color: #0056b3; }
+        .error { color: red; text-align: center; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Monitor de Água</h2>
+        {% if error %}<p class="error">{{ error }}</p>{% endif %}
+        <form method="POST">
+            <div class="form-group">
+                <label for="username">Usuário</label>
+                <input type="text" id="username" name="username" required>
             </div>
-        </div>
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit">Entrar</button>
+        </form>
     </div>
-</div>
-{% endblock %}
-
+</body>
+</html>

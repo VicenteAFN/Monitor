@@ -1,545 +1,90 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor de Água - Reservatório Principal</title>
+    <link rel="stylesheet" href="{{ url_for("static", filename="css/style.css") }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💧</text></svg>">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Monitor de Água</h1>
+            <nav>
+                <a href="#dashboard" class="active">Dashboard</a>
+                <a href="#history">Histórico</a>
+                <a href="#settings">Configurações</a>
+                <a href="/logout">Sair</a>
+            </nav>
+        </header>
 
-{% block title %}Dashboard - Monitor de Água{% endblock %}
+        <main>
+            <section id="dashboard" class="tab-content active">
+                <h2>Reservatório Principal</h2>
+                <div class="tank-container">
+                    <div class="tank" id="tank1-display">
+                        <div class="water" id="tank1-water"></div>
+                        <div class="level-text" id="tank1-level-text">0%</div>
+                    </div>
+                    <div class="tank-info">
+                        <p>Volume: <span id="tank1-volume">0 L</span></p>
+                        <p>Distância: <span id="tank1-distance">0 cm</span></p>
+                        <p>Status: <span id="tank1-status" class="status-offline">Offline</span></p>
+                        <p>Última Atualização: <span id="tank1-timestamp">--</span></p>
+                        <div class="alert-message" id="tank1-alert"></div>
+                    </div>
+                </div>
+            </section>
 
-{% block content %}
-<!-- Cabeçalho -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
-    <div class="container-fluid">
-        <div class="d-flex align-items-center">
-            <i class="bi bi-droplet-fill me-2" style="font-size: 1.5rem;"></i>
-            <div>
-                <span class="navbar-brand mb-0 h1">Monitor de Água</span>
-                <small class="d-block text-light opacity-75">Sistema de monitoramento em tempo real</small>
-            </div>
-        </div>
-        
-        <div class="d-flex align-items-center">
-            <span id="status-badge" class="badge bg-secondary me-3">
-                <i class="bi bi-wifi-off me-1"></i>Offline
-            </span>
-            <span id="last-update" class="text-light me-3 small">Aguardando dados...</span>
-            <div class="dropdown">
-                <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    <i class="bi bi-person-circle me-1"></i>Admin
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="/logout"><i class="bi bi-box-arrow-right me-2"></i>Sair</a></li>
-                </ul>
-            </div>
-        </div>
+            <section id="history" class="tab-content">
+                <h2>Histórico do Reservatório Principal</h2>
+                <canvas id="tank1Chart"></canvas>
+            </section>
+
+            <section id="settings" class="tab-content">
+                <h2>Configurações do Reservatório Principal</h2>
+                <form id="settingsForm">
+                    <div class="form-group">
+                        <label for="tank1_name">Nome do Reservatório:</label>
+                        <input type="text" id="tank1_name" name="tank1_name" value="Reservatório Principal" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="tank1_height">Altura (cm):</label>
+                        <input type="number" id="tank1_height" name="tank1_height" value="1000" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="tank1_width">Largura (cm):</label>
+                        <input type="number" id="tank1_width" name="tank1_width" value="200" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="tank1_length">Comprimento (cm):</label>
+                        <input type="number" id="tank1_length" name="tank1_length" value="200" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="tank1_dead_zone">Zona Morta (cm):</label>
+                        <input type="number" id="tank1_dead_zone" name="tank1_dead_zone" value="10" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="tank1_total_volume">Volume Total (L):</label>
+                        <input type="number" id="tank1_total_volume" name="tank1_total_volume" value="40000" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="tank1_low_alert_threshold">Alerta Nível Baixo (%):</label>
+                        <input type="number" id="tank1_low_alert_threshold" name="tank1_low_alert_threshold" value="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="tank1_high_alert_threshold">Alerta Nível Alto (%):</label>
+                        <input type="number" id="tank1_high_alert_threshold" name="tank1_high_alert_threshold" value="90">
+                    </div>
+                    <button type="submit">Salvar Configurações</button>
+                    <div id="settingsMessage" class="message"></div>
+                </form>
+            </section>
+        </main>
     </div>
-</nav>
 
-<!-- Conteúdo Principal -->
-<div class="container-fluid py-4">
-    <!-- Cards de Dados -->
-    <div class="row mb-4">
-        <div class="col-md-4 mb-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="card-subtitle mb-2 text-muted">Nível de Água</h6>
-                            <h2 id="water-level" class="card-title text-primary mb-1">0%</h2>
-                            <small id="level-status" class="text-muted">Aguardando dados</small>
-                        </div>
-                        <div class="bg-primary bg-opacity-10 rounded-circle p-3">
-                            <i class="bi bi-speedometer2 text-primary"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4 mb-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="card-subtitle mb-2 text-muted">Volume</h6>
-                            <h2 id="volume" class="card-title text-info mb-1">0 L</h2>
-                            <small id="volume-total" class="text-muted">de 1000 L total</small>
-                        </div>
-                        <div class="bg-info bg-opacity-10 rounded-circle p-3">
-                            <i class="bi bi-droplet-fill text-info"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4 mb-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="card-subtitle mb-2 text-muted">Distância</h6>
-                            <h2 id="distance" class="card-title text-warning mb-1">0 cm</h2>
-                            <small class="text-muted">Sensor à superfície</small>
-                        </div>
-                        <div class="bg-warning bg-opacity-10 rounded-circle p-3">
-                            <i class="bi bi-rulers text-warning"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Abas -->
-    <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab">
-                <i class="bi bi-speedometer2 me-2"></i>Dashboard
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
-                <i class="bi bi-graph-up me-2"></i>Histórico
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">
-                <i class="bi bi-gear me-2"></i>Configurações
-            </button>
-        </li>
-    </ul>
-    
-    <!-- Conteúdo das Abas -->
-    <div class="tab-content" id="mainTabsContent">
-        <!-- Aba Dashboard -->
-        <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
-            <div class="row">
-                <!-- Visualização do Tanque -->
-                <div class="col-lg-6 mb-4">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-transparent">
-                            <h5 class="card-title mb-0">
-                                <i class="bi bi-droplet me-2"></i>Visualização do Reservatório
-                            </h5>
-                        </div>
-                        <div class="card-body text-center">
-                            <div class="tank-container mx-auto mb-3">
-                                <div id="water-tank" class="water-tank">
-                                    <div id="water-fill" class="water-fill">
-                                        <div class="bubble bubble-1"></div>
-                                        <div class="bubble bubble-2"></div>
-                                        <div class="bubble bubble-3"></div>
-                                    </div>
-                                    <div class="tank-markers">
-                                        <span class="marker" style="top: 10%;">100%</span>
-                                        <span class="marker" style="top: 30%;">75%</span>
-                                        <span class="marker" style="top: 50%;">50%</span>
-                                        <span class="marker" style="top: 70%;">25%</span>
-                                        <span class="marker" style="top: 90%;">0%</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <h6 id="tank-info" class="text-muted">Reservatório de 1000L</h6>
-                            <small id="tank-dimensions" class="text-muted">100cm × 100cm × 100cm</small>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Status e Alertas -->
-                <div class="col-lg-6 mb-4">
-                    <div class="row">
-                        <div class="col-12 mb-3">
-                            <div class="card border-0 shadow-sm">
-                                <div class="card-body">
-                                    <h6 class="card-subtitle mb-2 text-muted">Status do Sistema</h6>
-                                    <div id="system-status" class="d-flex align-items-center">
-                                        <div class="status-indicator bg-secondary me-2"></div>
-                                        <span>Aguardando conexão...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-12 mb-3">
-                            <div class="card border-0 shadow-sm">
-                                <div class="card-body">
-                                    <h6 class="card-subtitle mb-2 text-muted">Alertas</h6>
-                                    <div id="alerts-container">
-                                        <div class="text-success">
-                                            <i class="bi bi-check-circle me-2"></i>Nenhum alerta
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-12">
-                            <div class="card border-0 shadow-sm">
-                                <div class="card-body">
-                                    <h6 class="card-subtitle mb-2 text-muted">Última Atualização</h6>
-                                    <div id="last-update-detail" class="text-muted">
-                                        Aguardando dados...
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Aba Histórico -->
-        <div class="tab-pane fade" id="history" role="tabpanel">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-transparent">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-graph-up me-2"></i>Histórico dos Últimos 7 Dias
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="historyChart"></canvas>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Aba Configurações -->
-        <div class="tab-pane fade" id="settings" role="tabpanel">
-            <div class="row">
-                <div class="col-lg-6 mb-4">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-transparent">
-                            <h5 class="card-title mb-0">
-                                <i class="bi bi-box me-2"></i>Configurações do Reservatório
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <form id="settings-form">
-                                <div class="mb-3">
-                                    <label for="tank_height" class="form-label">Altura da Caixa (cm)</label>
-                                    <input type="number" class="form-control" id="tank_height" name="tank_height" value="100">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="tank_width" class="form-label">Largura da Caixa (cm)</label>
-                                    <input type="number" class="form-control" id="tank_width" name="tank_width" value="100">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="tank_length" class="form-label">Comprimento da Caixa (cm)</label>
-                                    <input type="number" class="form-control" id="tank_length" name="tank_length" value="100">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="dead_zone" class="form-label">Zona Morta (cm)</label>
-                                    <input type="number" class="form-control" id="dead_zone" name="dead_zone" value="5">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="total_volume" class="form-label">Volume Total (L)</label>
-                                    <input type="number" class="form-control" id="total_volume" name="total_volume" value="1000">
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-lg-6 mb-4">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-transparent">
-                            <h5 class="card-title mb-0">
-                                <i class="bi bi-exclamation-triangle me-2"></i>Configurações de Alertas
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label for="low_alert_threshold" class="form-label">Alerta Nível Baixo (%)</label>
-                                <input type="number" class="form-control" id="low_alert_threshold" name="low_alert_threshold" value="20">
-                            </div>
-                            <div class="mb-3">
-                                <label for="high_alert_threshold" class="form-label">Alerta Nível Alto (%)</label>
-                                <input type="number" class="form-control" id="high_alert_threshold" name="high_alert_threshold" value="90">
-                            </div>
-                            
-                            <button type="button" class="btn btn-primary w-100" onclick="saveSettings()">
-                                <i class="bi bi-check-lg me-2"></i>Salvar Configurações
-                            </button>
-                            
-                            <div id="save-message" class="mt-3" style="display: none;"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-// Variáveis globais
-let historyChart = null;
-let currentSettings = {};
-
-// Função para carregar configurações
-async function loadSettings() {
-    try {
-        currentSettings = await API.get("/api/settings");
-        document.getElementById("tank_height").value = currentSettings.tank_height;
-        document.getElementById("tank_width").value = currentSettings.tank_width;
-        document.getElementById("tank_length").value = currentSettings.tank_length;
-        document.getElementById("dead_zone").value = currentSettings.dead_zone;
-        document.getElementById("total_volume").value = currentSettings.total_volume;
-        document.getElementById("low_alert_threshold").value = currentSettings.low_alert_threshold;
-        document.getElementById("high_alert_threshold").value = currentSettings.high_alert_threshold;
-    } catch (error) {
-        console.error("Erro ao carregar configurações:", error);
-    }
-}
-
-// Função para salvar configurações
-async function saveSettings() {
-    const settings = {
-        tank_height: parseFloat(document.getElementById("tank_height").value),
-        tank_width: parseFloat(document.getElementById("tank_width").value),
-        tank_length: parseFloat(document.getElementById("tank_length").value),
-        dead_zone: parseFloat(document.getElementById("dead_zone").value),
-        total_volume: parseFloat(document.getElementById("total_volume").value),
-        low_alert_threshold: parseFloat(document.getElementById("low_alert_threshold").value),
-        high_alert_threshold: parseFloat(document.getElementById("high_alert_threshold").value)
-    };
-
-    const errors = Validation.validateTankSettings(settings);
-    const saveMessage = document.getElementById("save-message");
-
-    if (errors.length > 0) {
-        saveMessage.innerHTML = `<div class="alert alert-danger">${errors.join("<br>")}</div>`;
-        saveMessage.style.display = "block";
-        return;
-    }
-
-    try {
-        await API.post("/api/settings", settings);
-        Notifications.show("Configurações salvas com sucesso!", "success");
-        saveMessage.style.display = "none";
-        loadSettings(); // Recarrega as configurações para atualizar currentSettings
-        updateDashboard(); // Atualiza o dashboard com as novas configurações
-    } catch (error) {
-        console.error("Erro ao salvar configurações:", error);
-        Notifications.show("Erro ao salvar configurações.", "danger");
-        saveMessage.innerHTML = `<div class="alert alert-danger">Erro ao salvar configurações.</div>`;
-        saveMessage.style.display = "block";
-    }
-}
-
-// Função para atualizar status de conexão
-function updateStatus(isOnline) {
-    const statusBadge = document.getElementById("status-badge");
-    const systemStatus = document.getElementById("system-status");
-
-    if (isOnline) {
-        statusBadge.classList.remove("bg-secondary");
-        statusBadge.classList.add("bg-success");
-        statusBadge.innerHTML = `<i class="bi bi-wifi me-1"></i>Online`;
-        systemStatus.querySelector("span").innerText = "Online";
-        systemStatus.classList.remove("text-danger");
-        systemStatus.classList.add("text-success");
-    } else {
-        statusBadge.classList.remove("bg-success");
-        statusBadge.classList.add("bg-secondary");
-        statusBadge.innerHTML = `<i class="bi bi-wifi-off me-1"></i>Offline`;
-        systemStatus.querySelector("span").innerText = "Offline";
-        systemStatus.classList.remove("text-success");
-        systemStatus.classList.add("text-danger");
-    }
-}
-
-// Função para carregar histórico e exibir gráfico
-async function loadHistory() {
-    try {
-        const response = await API.get("/api/history");
-        const data = response.reverse(); // Inverte para ter os dados mais antigos primeiro
-
-        const ctx = document.getElementById("historyChart").getContext("2d");
-
-        // Prepara dados para o gráfico
-        const chartData = data.map(item => ({
-            x: new Date(item.timestamp),
-            level: item.level_percentage,
-            volume: item.volume_liters
-        }));
-
-        if (historyChart) {
-            historyChart.destroy();
-        }
-
-        historyChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                datasets: [{
-                    label: 'Nível (%)',
-                    data: chartData.map(item => ({ x: item.x, y: item.level })),
-                    borderColor: '#007bff',
-                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                    yAxisID: 'y'
-                }, {
-                    label: 'Volume (L)',
-                    data: chartData.map(item => ({ x: item.x, y: item.volume })),
-                    borderColor: '#28a745',
-                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                    yAxisID: 'y1'
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            unit: 'hour',
-                            tooltipFormat: 'DD/MM/YYYY HH:mm'
-                        },
-                        title: {
-                            display: true,
-                            text: 'Data'
-                        }
-                    },
-                    y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        min: 0,
-                        max: 100,
-                        title: {
-                            display: true,
-                            text: 'Nível (%)'
-                        }
-                    },
-                    y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        title: {
-                            display: true,
-                            text: 'Volume (L)'
-                        },
-                        grid: {
-                            drawOnChartArea: false,
-                        },
-                    }
-                }
-            }
-        });
-    } catch (error) {
-        console.error("Erro ao carregar histórico:", error);
-    }
-}
-
-// Função para atualizar alertas
-function updateAlerts(level_percentage, low_threshold, high_threshold) {
-    const alertsContainer = document.getElementById("alerts-container");
-    alertsContainer.innerHTML = ""; // Limpa alertas existentes
-
-    if (level_percentage <= low_threshold) {
-        alertsContainer.innerHTML += `
-            <div class="text-danger mb-1">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>Nível de água muito baixo!
-            </div>
-        `;
-    } else if (level_percentage >= high_threshold) {
-        alertsContainer.innerHTML += `
-            <div class="text-info mb-1">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>Nível de água muito alto!
-            </div>
-        `;
-    }
-
-    if (alertsContainer.innerHTML === "") {
-        alertsContainer.innerHTML = `
-            <div class="text-success">
-                <i class="bi bi-check-circle me-2"></i>Nenhum alerta
-            </div>
-        `;
-    }
-}
-
-// Função para atualizar dados
-async function updateData() {
-    try {
-        const response = await fetch('/api/latest');
-        const data = await response.json();
-        
-        if (data.timestamp) {
-            updateUI(data);
-            updateStatus(true);
-        } else {
-            updateStatus(false);
-        }
-    } catch (error) {
-        console.error('Erro ao buscar dados:', error);
-        updateStatus(false);
-    }
-}
-
-// Função para atualizar interface
-function updateUI(data) {
-    // Atualiza cards principais
-    document.getElementById('water-level').textContent = data.level_percentage.toFixed(1) + '%';
-    document.getElementById('volume').textContent = Math.round(data.volume_liters) + ' L';
-    document.getElementById('distance').textContent = data.distance_cm.toFixed(1) + ' cm';
-    
-    // Atualiza status do nível
-    const levelStatus = document.getElementById('level-status');
-    if (data.level_percentage >= 70) {
-        levelStatus.textContent = 'Nível Alto';
-        levelStatus.className = 'text-success';
-    } else if (data.level_percentage >= 30) {
-        levelStatus.textContent = 'Nível Normal';
-        levelStatus.className = 'text-warning';
-    } else {
-        levelStatus.textContent = 'Nível Baixo';
-        levelStatus.className = 'text-danger';
-    }
-    
-    // Atualiza tanque visual
-    const waterFill = document.getElementById('water-fill');
-    waterFill.style.height = data.level_percentage + '%';
-    
-    // Atualiza cor do tanque baseado no nível
-    if (data.level_percentage >= 70) {
-        waterFill.style.backgroundColor = '#28a745';
-    } else if (data.level_percentage >= 30) {
-        waterFill.style.backgroundColor = '#ffc107';
-    } else {
-        waterFill.style.backgroundColor = '#dc3545';
-    }
-    
-    // Atualiza timestamp
-    const timestamp = new Date(data.timestamp).toLocaleString('pt-BR');
-    document.getElementById('last-update').textContent = timestamp;
-    document.getElementById('last-update-detail').textContent = timestamp;
-    
-    // Verifica alertas
-    updateAlerts(data.level_percentage, currentSettings.low_alert_threshold || 20, currentSettings.high_alert_threshold || 90);
-    
-    // Atualiza informações do tanque
-    if (currentSettings.total_volume) {
-        document.getElementById('volume-total').textContent = `de ${currentSettings.total_volume} L total`;
-        document.getElementById('tank-info').textContent = `Reservatório de ${currentSettings.total_volume}L`;
-        document.getElementById('tank-dimensions').textContent = `${currentSettings.tank_height}cm × ${currentSettings.tank_width}cm × ${currentSettings.tank_length}cm`;
-    }
-}
-
-// Inicialização
-document.addEventListener('DOMContentLoaded', function() {
-    loadSettings();
-    loadHistory();
-    updateData();
-    
-    // Atualiza dados a cada 5 segundos
-    setInterval(updateData, 5000);
-});
-
-// Exporta funções para uso global
-window.loadHistory = loadHistory;
-window.loadSettings = loadSettings;
-window.saveSettings = saveSettings;
-window.updateStatus = updateStatus;
-window.updateData = updateData;
-window.updateUI = updateUI;
-window.updateAlerts = updateAlerts;
-</script>
-{% endblock %}
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for("static", filename="js/main.js") }}"></script>
+</body>
+</html>

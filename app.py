@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Monitor de Água - Aplicação Flask com Múltiplos Reservatórios
-Suporte para múltiplos tanques de água com identificação por tank_id
-Versão Personalizada: Reservatório Principal e Caixa D1
+Monitor de Água - Versão ULTRA-COMPATÍVEL (Tanque Único 40.000L)
+Otimizado para o Render com detecção automática de porta e logs.
 """
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
@@ -11,386 +10,169 @@ from flask_cors import CORS
 import json
 import sqlite3
 import os
+import sys
 from datetime import datetime, timedelta
 import hashlib
+import logging
+
+# Configuração de Logs para o Render
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = 'water-monitor-multi-secret-key-2024'
+app.secret_key = os.environ.get('SECRET_KEY', 'water-monitor-ultra-2024')
 
-# Configuração CORS mais permissiva para Render
+# CORS configurado para aceitar requisições do Render
 CORS(app, origins="*", allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
-# Configurações padrão para múltiplos tanques - PERSONALIZADAS
-DEFAULT_SETTINGS = {
-    'tanks': {
-        'tank1': {
-            'name': 'Reservatório Principal',
-            'tank_height': 1000,  # 1000 cm = 10 metros
-            'tank_width': 200,    # 200 cm = 2 metros
-            'tank_length': 200,   # 200 cm = 2 metros
-            'dead_zone': 10,      # 10 cm de zona morta para tanque grande
-            'total_volume': 40000, # 40.000 litros (1000 * 200 * 200 / 1000)
-            'low_alert_threshold': 20,
-            'high_alert_threshold': 90,
-            'enabled': True
-        },
-        'tank2': {
-            'name': 'Caixa D1',
-            'tank_height': 120,
-            'tank_width': 80,
-            'tank_length': 80,
-            'dead_zone': 5,
-            'total_volume': 800,
-            'low_alert_threshold': 25,
-            'high_alert_threshold': 85,
-            'enabled': True
-        }
-    }
+# CONFIGURAÇÕES FORÇADAS (40.000L)
+TANK_CONFIG = {
+    'name': 'Reservatório Principal',
+    'tank_height': 1000,   # 10 metros
+    'tank_width': 200,     # 2 metros
+    'tank_length': 200,    # 2 metros
+    'dead_zone': 10,       # 10 cm
+    'total_volume': 40000  # 40.000 Litros
 }
 
-# Dados em memória para demonstração (por tanque)
-water_data = {
-    'tank1': [],
-    'tank2': []
-}
-
+# Estado atual em memória
 current_data = {
-    'tank1': {
-        'tank_id': 'tank1',
-        'level_percentage': 0,
-        'volume_liters': 0,
-        'distance_cm': 0,
-        'status': 'offline',
-        'timestamp': None
-    },
-    'tank2': {
-        'tank_id': 'tank2',
-        'level_percentage': 0,
-        'volume_liters': 0,
-        'distance_cm': 0,
-        'status': 'offline',
-        'timestamp': None
-    }
+    'tank_id': 'tank1',
+    'level_percentage': 0,
+    'volume_liters': 0,
+    'distance_cm': 0,
+    'status': 'offline',
+    'timestamp': None
 }
 
 def init_database():
-    """Inicializa o banco de dados SQLite com suporte a múltiplos tanques"""
-    conn = sqlite3.connect('water_monitor_multi.db')
-    cursor = conn.cursor()
-    
-    # Tabela para histórico de dados com tank_id
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS water_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tank_id TEXT NOT NULL,
-            timestamp TEXT NOT NULL,
-            distance_cm REAL NOT NULL,
-            level_percentage REAL NOT NULL,
-            volume_liters REAL NOT NULL,
-            status TEXT NOT NULL
-        )
-    ''')
-    
-    # Tabela para consumo diário com tank_id
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS daily_consumption (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tank_id TEXT NOT NULL,
-            date TEXT NOT NULL,
-            consumption_liters REAL NOT NULL,
-            max_level REAL NOT NULL,
-            min_level REAL NOT NULL,
-            avg_level REAL NOT NULL,
-            UNIQUE(tank_id, date)
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
-
-def load_settings():
-    """Carrega configurações do arquivo JSON"""
     try:
-        if os.path.exists('settings_multi.json'):
-            with open('settings_multi.json', 'r') as f:
-                return json.load(f)
-        return DEFAULT_SETTINGS
-    except Exception:
-        return DEFAULT_SETTINGS
+        conn = sqlite3.connect('water_monitor.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS water_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tank_id TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                distance_cm REAL NOT NULL,
+                level_percentage REAL NOT NULL,
+                volume_liters REAL NOT NULL,
+                status TEXT NOT NULL
+            )
+        ''')
+        conn.commit()
+        conn.close()
+        logger.info("Banco de dados inicializado com sucesso.")
+    except Exception as e:
+        logger.error(f"Erro ao inicializar banco de dados: {e}")
 
-def save_settings(settings):
-    """Salva configurações no arquivo JSON"""
-    with open('settings_multi.json', 'w') as f:
-        json.dump(settings, f, indent=2)
+def calculate_data(distance_cm, status='online'):
+    h = TANK_CONFIG['tank_height']
+    dz = TANK_CONFIG['dead_zone']
+    vol = TANK_CONFIG['total_volume']
 
-def load_users():
-    """Carrega usuários do arquivo JSON"""
-    try:
-        if os.path.exists('users.json'):
-            with open('users.json', 'r') as f:
-                return json.load(f)
-        
-        # Usuário padrão
-        default_users = {
-            'admin': {
-                'password': hashlib.sha256('admin123'.encode()).hexdigest(),
-                'role': 'admin'
-            }
-        }
-        with open('users.json', 'w') as f:
-            json.dump(default_users, f, indent=2)
-        return default_users
-    except Exception:
-        return {}
-
-def check_auth(username, password):
-    """Verifica autenticação do usuário"""
-    users = load_users()
-    if username in users:
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
-        return users[username]['password'] == password_hash
-    return False
-
-def calculate_tank_data(tank_id, distance_cm, status='online'):
-    """Calcula dados do tanque baseado na distância"""
-    settings = load_settings()
+    water_height = h - distance_cm - dz
+    if water_height < 0: water_height = 0
     
-    if tank_id not in settings['tanks']:
-        raise ValueError(f"Tank ID {tank_id} não encontrado nas configurações")
-    
-    tank_config = settings['tanks'][tank_id]
-    tank_height = tank_config['tank_height']
-    dead_zone = tank_config['dead_zone']
-    total_volume = tank_config['total_volume']
+    percentage = (water_height / (h - dz)) * 100
+    if percentage > 100: percentage = 100
+    if percentage < 0: percentage = 0
 
-    water_height = tank_height - distance_cm - dead_zone
-    if water_height < 0: 
-        water_height = 0
-
-    level_percentage = (water_height / (tank_height - dead_zone)) * 100
-    if level_percentage > 100: 
-        level_percentage = 100
-    if level_percentage < 0: 
-        level_percentage = 0
-
-    volume_liters = (level_percentage / 100) * total_volume
+    liters = (percentage / 100) * vol
 
     return {
-        'tank_id': tank_id,
-        'distance_cm': distance_cm,
-        'level_percentage': level_percentage,
-        'volume_liters': volume_liters,
+        'tank_id': 'tank1',
+        'distance_cm': round(distance_cm, 2),
+        'level_percentage': round(percentage, 2),
+        'volume_liters': round(liters, 2),
         'status': status,
         'timestamp': datetime.now().isoformat()
     }
 
 @app.route('/')
 def index():
-    """Página principal"""
     if 'user' not in session:
         return redirect(url_for('login'))
-    return render_template('index_multi.html')
+    return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Página de login"""
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        
-        if check_auth(username, password):
-            session['user'] = username
+        username = request.form.get('username')
+        password = request.form.get('password')
+        if username == 'admin' and password == 'admin123':
+            session['user'] = 'admin'
+            logger.info("Login realizado com sucesso.")
             return redirect(url_for('index'))
-        else:
-            return render_template('login.html', error='Credenciais inválidas')
-    
+        logger.warning(f"Tentativa de login falhou para o usuário: {username}")
+        return render_template('login.html', error='Credenciais inválidas')
     return render_template('login.html')
 
 @app.route('/logout')
 def logout():
-    """Logout do usuário"""
     session.pop('user', None)
     return redirect(url_for('login'))
 
 @app.route('/api/water-level', methods=['POST'])
-def receive_water_level():
-    """Recebe dados do sensor ESP32 com tank_id"""
-    global current_data, water_data
-    
+def receive_data():
+    global current_data
     try:
         data = request.get_json()
-        
-        # Tank ID é obrigatório
-        tank_id = data.get('tank_id', 'tank1')  # Default para tank1 se não especificado
-        distance_cm = float(data.get('distance_cm', 0))
+        if not data:
+            return jsonify({"status": "error", "message": "JSON não fornecido"}), 400
+            
+        dist = float(data.get('distance_cm', 0))
         status = data.get('status', 'online')
-
-        # Calcula dados do tanque
-        tank_data = calculate_tank_data(tank_id, distance_cm, status)
         
-        # Atualiza dados atuais
-        current_data[tank_id] = tank_data
+        current_data = calculate_data(dist, status)
         
-        # Adiciona ao histórico em memória
-        if tank_id not in water_data:
-            water_data[tank_id] = []
-        
-        water_data[tank_id].append(tank_data.copy())
-        
-        # Limita histórico em memória
-        if len(water_data[tank_id]) > 1000:
-            water_data[tank_id].pop(0)
-
-        # Salva no banco de dados
-        save_to_database(tank_data)
-
-        return jsonify({"status": "success", "message": f"Dados recebidos para {tank_id}"})
-
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
-
-def save_to_database(data):
-    """Salva dados no banco de dados"""
-    try:
-        conn = sqlite3.connect('water_monitor_multi.db')
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            INSERT INTO water_history (tank_id, timestamp, distance_cm, level_percentage, volume_liters, status)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (data['tank_id'], data['timestamp'], data['distance_cm'], data['level_percentage'], 
-              data['volume_liters'], data['status']))
-        
+        conn = sqlite3.connect('water_monitor.db')
+        c = conn.cursor()
+        c.execute('INSERT INTO water_history (tank_id, timestamp, distance_cm, level_percentage, volume_liters, status) VALUES (?,?,?,?,?,?)',
+                  (current_data['tank_id'], current_data['timestamp'], current_data['distance_cm'], 
+                   current_data['level_percentage'], current_data['volume_liters'], current_data['status']))
         conn.commit()
         conn.close()
-    except Exception:
-        pass
+        
+        logger.info(f"Dados recebidos: {dist}cm -> {current_data['volume_liters']}L")
+        return jsonify({"status": "success", "tank": "tank1", "volume": current_data['volume_liters']})
+    except Exception as e:
+        logger.error(f"Erro ao receber dados: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 400
 
 @app.route('/api/latest')
-def get_latest_data():
-    """Retorna os dados mais recentes de todos os tanques"""
+@app.route('/api/latest/tank1')
+def get_latest():
     return jsonify(current_data)
-
-@app.route('/api/latest/<tank_id>')
-def get_latest_tank_data(tank_id):
-    """Retorna os dados mais recentes de um tanque específico"""
-    if tank_id in current_data:
-        return jsonify(current_data[tank_id])
-    else:
-        return jsonify({"error": "Tank ID não encontrado"}), 404
-
-@app.route('/api/data')
-def get_all_data():
-    """Retorna todos os dados em memória de todos os tanques"""
-    return jsonify(water_data)
-
-@app.route('/api/data/<tank_id>')
-def get_tank_data(tank_id):
-    """Retorna todos os dados em memória de um tanque específico"""
-    if tank_id in water_data:
-        return jsonify(water_data[tank_id])
-    else:
-        return jsonify({"error": "Tank ID não encontrado"}), 404
-
-@app.route('/api/history')
-def get_history():
-    """Retorna histórico dos últimos N dias de todos os tanques"""
-    days = request.args.get('days', 7, type=int)
-    tank_id = request.args.get('tank_id', None)
-    
-    try:
-        conn = sqlite3.connect('water_monitor_multi.db')
-        cursor = conn.cursor()
-        
-        start_date = (datetime.now() - timedelta(days=days)).isoformat()
-        
-        if tank_id:
-            # Histórico de um tanque específico
-            cursor.execute('''
-                SELECT tank_id, timestamp, distance_cm, level_percentage, volume_liters, status
-                FROM water_history
-                WHERE tank_id = ? AND timestamp >= ?
-                ORDER BY timestamp DESC
-                LIMIT 100
-            ''', (tank_id, start_date))
-        else:
-            # Histórico de todos os tanques
-            cursor.execute('''
-                SELECT tank_id, timestamp, distance_cm, level_percentage, volume_liters, status
-                FROM water_history
-                WHERE timestamp >= ?
-                ORDER BY timestamp DESC
-                LIMIT 200
-            ''', (start_date,))
-        
-        rows = cursor.fetchall()
-        conn.close()
-        
-        history = []
-        for row in rows:
-            history.append({
-                'tank_id': row[0],
-                'timestamp': row[1],
-                'distance_cm': row[2],
-                'level_percentage': row[3],
-                'volume_liters': row[4],
-                'status': row[5]
-            })
-        
-        return jsonify(history)
-    except Exception:
-        return jsonify([])
 
 @app.route('/api/settings', methods=['GET', 'POST'])
 def handle_settings():
-    """Gerencia configurações do sistema"""
-    if request.method == 'POST':
-        settings = request.get_json()
-        save_settings(settings)
-        return jsonify({'status': 'success', 'message': 'Configurações salvas'})
-    
-    return jsonify(load_settings())
-
-@app.route('/api/status')
-def get_status():
-    """Status do sistema"""
-    total_data_count = sum(len(data) for data in water_data.values())
-    
     return jsonify({
-        'status': 'online',
-        'timestamp': datetime.now().isoformat(),
-        'total_data_count': total_data_count,
-        'tanks_status': {
-            tank_id: {
-                'status': current_data[tank_id]['status'],
-                'last_update': current_data[tank_id]['timestamp'],
-                'data_count': len(water_data[tank_id])
-            }
-            for tank_id in current_data.keys()
+        'tanks': {
+            'tank1': TANK_CONFIG
         }
     })
 
-# Rota adicional para debug no Render
-@app.route('/api/debug')
-def debug_info():
-    """Informações de debug para troubleshooting"""
-    return jsonify({
-        'current_data': current_data,
-        'water_data_count': {k: len(v) for k, v in water_data.items()},
-        'settings': load_settings(),
-        'timestamp': datetime.now().isoformat()
-    })
+@app.route('/api/history')
+def get_history():
+    try:
+        conn = sqlite3.connect('water_monitor.db')
+        c = conn.cursor()
+        c.execute('SELECT timestamp, level_percentage, volume_liters FROM water_history WHERE tank_id="tank1" ORDER BY timestamp DESC LIMIT 50')
+        rows = c.fetchall()
+        conn.close()
+        return jsonify([{'timestamp': r[0], 'level_percentage': r[1], 'volume_liters': r[2]} for r in rows])
+    except Exception as e:
+        logger.error(f"Erro ao buscar histórico: {e}")
+        return jsonify([])
+
+@app.route('/health')
+def health_check():
+    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
 
 if __name__ == '__main__':
     init_database()
-    
-    print("=== Monitor de Água - Sistema Personalizado ===")
-    print("Usuário padrão: admin")
-    print("Senha padrão: admin123")
-    print("Tank1: Reservatório Principal (40.000L)")
-    print("Tank2: Caixa D1 (editável)")
-    print("===============================================")
-    
-    # Configuração para produção (Render)
+    # Detecção de porta para o Render
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    logger.info(f"Iniciando servidor na porta {port}...")
+    app.run(host='0.0.0.0', port=port)
