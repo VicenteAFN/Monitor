@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import json
 import logging
 import sqlite3
+from collections import deque
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, g
 from flask_cors import CORS
@@ -31,6 +32,10 @@ TANK_CONFIG = {
 
 # O volume total em litros é fixo em 40.000L, conforme especificado.
 TANK_CONFIG['total_volume'] = 40000 # Litros
+
+# FILTRO DE MÉDIA MÓVEL
+# Usamos um deque para armazenar as últimas 5 leituras de distância
+last_readings = deque(maxlen=5)
 
 # Estado atual em memória (apenas para o Reservatório Principal)
 current_data = {
@@ -134,13 +139,19 @@ def receive_data():
         dist = float(data.get('distance_cm', 0))
         status = data.get('status', 'online')
         
+        # Adiciona a nova leitura ao deque
+        last_readings.append(dist)
+        
+        # Calcula a média das últimas leituras
+        smoothed_dist = sum(last_readings) / len(last_readings)
+        
         # Garante que o tank_id seja sempre 'tank1' para processamento
         incoming_tank_id = data.get("tank_id", "tank1")
         if incoming_tank_id not in ['tank1', 'tanque1']:
             logger.warning(f"Dados recebidos para tank_id desconhecido: {incoming_tank_id}. Ignorando.")
             return jsonify({"status": "error", "message": "Tank ID desconhecido"}), 400
 
-        current_data = calculate_data(dist, status, 'tank1') # Força para tank1
+        current_data = calculate_data(smoothed_dist, status, 'tank1') # Usa a distância suavizada
         
         conn = sqlite3.connect('water_monitor.db')
         c = conn.cursor()
@@ -150,7 +161,7 @@ def receive_data():
         conn.commit()
         conn.close()
         
-        logger.info(f"Dados recebidos para {current_data['tank_id']}: {dist}cm -> {current_data['volume_liters']}L")
+        logger.info(f"Dados recebidos para {current_data['tank_id']}: {dist}cm -> {current_data['volume_liters']}L (suavizado: {smoothed_dist}cm)")
         return jsonify({"status": "success", "tank": current_data['tank_id'], "volume": current_data['volume_liters']})
     except Exception as e:
         logger.error(f"Erro ao receber dados: {e}")
