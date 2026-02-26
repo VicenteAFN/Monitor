@@ -10,7 +10,7 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from flask_cors import CORS
 
 # Configuração de Logs para o Render
-logging.basicConfig(level=logging.INFO, format=\'%(asctime)s - %(levelname)s - %(message)s\')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder=\'static\', template_folder=\'templates\')
@@ -52,7 +52,8 @@ current_data = {
 
 def init_database():
     try:
-        conn = sqlite3.connect(\'water_monitor.db\')
+        db_path = os.path.join('/tmp/', 'water_monitor.db')
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute(\'\'\'
             CREATE TABLE IF NOT EXISTS water_history (
@@ -177,7 +178,8 @@ def receive_data():
                 alerta_ativo = True
         current_data[\'alert_low\'] = alerta_ativo
         
-        conn = sqlite3.connect(\'water_monitor.db\')
+        db_path = os.path.join('/tmp/', 'water_monitor.db')
+        conn = sqlite3.connect(db_path)
         c = conn.cursor()
         c.execute(\'INSERT INTO water_history (tank_id, timestamp, distance_cm, level_percentage, volume_liters, status, alert_low) VALUES (?,?,?,?,?,?,?)\
                   (current_data[\'tank_id\'], current_data[\'timestamp\'], current_data[\'distance_cm\'], 
@@ -199,7 +201,8 @@ def get_latest():
 @app.route(\'/api/history\')
 def get_history():
     try:
-        conn = sqlite3.connect(\'water_monitor.db\')
+        db_path = os.path.join('/tmp/', 'water_monitor.db')
+        conn = sqlite3.connect(db_path)
         c = conn.cursor()
         # Fuso horário de Brasília para a consulta
         brasiliatime = pytz.timezone(\'America/Sao_Paulo\')
