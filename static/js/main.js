@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const distance = parseFloat(data.distance_cm);
             const timestamp = data.timestamp;
             const status = data.status;
+            const alertLow = data.alert_low; // Novo campo para o alerta
 
             // Update tank visual
             tank1WaterFill.style.height = `${Math.min(100, Math.max(0, percentage))}%`;
@@ -63,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
             tank1Timestamp.textContent = moment(timestamp).format('DD/MM/YYYY HH:mm:ss');
 
             // Color and alert logic
-            if (percentage < 20) {
+            if (alertLow) { // Usa o estado do alerta do backend
                 tank1WaterFill.style.backgroundColor = '#dc3545'; // Red
                 tank1Alert.className = 'alert-message alert-low';
                 tank1Alert.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Nível muito baixo! Abastecer!';
@@ -139,8 +140,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateChart(data) {
-        const labels = data.map(item => moment(item.timestamp).format('HH:mm'));
+        // Ajusta o formato do timestamp para o Chart.js
+        const labels = data.map(item => moment(item.timestamp, 'DD/MM HH:mm:ss').toDate());
         const percentages = data.map(item => item.level_percentage);
+        const volumes = data.map(item => item.volume_liters);
 
         if (tank1Chart) {
             tank1Chart.destroy();
@@ -151,14 +154,26 @@ document.addEventListener('DOMContentLoaded', function() {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'Nível (%)',
-                    data: percentages,
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    fill: true,
-                    tension: 0.4
-                }]
+                datasets: [
+                    {
+                        label: 'Nível (%)',
+                        data: percentages,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Volume (L)',
+                        data: volumes,
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }
+                ]
             },
             options: {
                 responsive: true,
@@ -167,8 +182,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     x: {
                         type: 'time',
                         time: {
-                            unit: 'minute',
-                            tooltipFormat: 'HH:mm:ss'
+                            unit: 'hour',
+                            displayFormats: {
+                                hour: 'DD/MM HH:mm'
+                            },
+                            tooltipFormat: 'DD/MM/YYYY HH:mm:ss'
                         },
                         title: {
                             display: true,
@@ -181,7 +199,25 @@ document.addEventListener('DOMContentLoaded', function() {
                             display: true,
                             text: 'Nível (%)'
                         },
-                        max: 100
+                        max: 100,
+                        position: 'left'
+                    },
+                    y1: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Volume (L)'
+                        },
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false // Only draw grid lines for the first y-axis
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
                     }
                 }
             }
@@ -192,4 +228,5 @@ document.addEventListener('DOMContentLoaded', function() {
     fetchLatestData();
     fetchHistoryData();
     setInterval(fetchLatestData, 5000); // Update every 5 seconds
+    setInterval(fetchHistoryData, 60000); // Update history every 60 seconds
 });
