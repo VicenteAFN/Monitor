@@ -13,7 +13,7 @@ from flask_cors import CORS
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__, static_folder=\'static\', template_folder=\'templates\')
+app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.environ.get(\'SECRET_KEY\', \'condominio-colina-dos-cedros-2024\')
 
 # CORS configurado para aceitar requisições de qualquer origem
@@ -181,9 +181,8 @@ def receive_data():
         db_path = os.path.join('/tmp/', 'water_monitor.db')
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
-        c.execute(\'INSERT INTO water_history (tank_id, timestamp, distance_cm, level_percentage, volume_liters, status, alert_low) VALUES (?,?,?,?,?,?,?)\
-                  (current_data[\'tank_id\'], current_data[\'timestamp\'], current_data[\'distance_cm\'], 
-                   current_data[\'level_percentage\'], current_data[\'volume_liters\'], current_data[\'status\'], current_data[\'alert_low\']))
+      c.execute("INSERT INTO water_history (tank_id, timestamp, distance_cm, level_percentage, volume_liters, status, alert_low) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                  (current_data["tank_id"], current_data["timestamp"], current_data["distance_cm"], current_data["level_percentage"], current_data["volume_liters"], current_data["status"], current_data["alert_low"]))
         conn.commit()
         conn.close()
         
