@@ -1,232 +1,232 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const navItems = document.querySelectorAll('.main-nav .nav-item');
-    const tabContents = document.querySelectorAll('.tab-content');
+// Modern JavaScript for Water Monitoring System
 
-    // Activate default tab (Dashboard) and hide others
-    document.getElementById('dashboard').classList.add('active');
-    document.querySelector('.main-nav .nav-item[data-tab="dashboard"]').classList.add('active');
+let chart = null;
+const API_BASE = window.location.origin;
 
-    navItems.forEach(item => {
-        item.addEventListener('click', function(event) {
-            event.preventDefault();
-            const targetTab = this.dataset.tab;
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Sistema iniciado');
+    updateData();
+    setInterval(updateData, 5000); // Atualizar a cada 5 segundos
+});
 
-            // Remove active class from all nav items and add to clicked one
-            navItems.forEach(link => link.classList.remove('active'));
-            this.classList.add('active');
+async function updateData() {
+    try {
+        const response = await fetch(`${API_BASE}/api/latest`);
+        const data = await response.json();
 
-            // Hide all tab contents and show the target one
-            tabContents.forEach(content => {
-                if (content.id === targetTab) {
-                    content.classList.add('active');
-                } else {
-                    content.classList.remove('active');
-                }
-            });
+        if (data && data.level_percentage !== undefined) {
+            updateUI(data);
+            updateChart();
+        }
+    } catch (error) {
+        console.error('Erro ao buscar dados:', error);
+        updateStatus(false);
+    }
+}
 
-            // If switching to history tab, fetch history data
-            if (targetTab === 'history') {
-                fetchHistoryData();
-            }
-        });
-    });
+function updateUI(data) {
+    // Update tank visualization
+    const percentage = data.level_percentage || 0;
+    const tankWater = document.getElementById('tank-water');
+    if (tankWater) {
+        tankWater.style.height = percentage + '%';
+    }
 
-    const tank1WaterFill = document.getElementById('tank1-water-fill');
-    const tank1LevelPercentage = document.getElementById('tank1-level-percentage');
-    const tank1LevelText = document.getElementById('tank1-level-text');
-    const tank1VolumeLiters = document.getElementById('tank1-volume-liters');
-    const tank1DistanceCm = document.getElementById('tank1-distance-cm');
-    const tank1Timestamp = document.getElementById('tank1-timestamp');
-    const tank1Alert = document.getElementById('tank1-alert');
-    const statusIndicator = document.getElementById('status-indicator');
-    const statusText = document.getElementById('status-text');
+    // Update displays
+    const percentageDisplay = document.getElementById('percentage-display');
+    if (percentageDisplay) {
+        percentageDisplay.textContent = Math.round(percentage);
+    }
 
-    let tank1Chart;
+    const volumeDisplay = document.getElementById('volume-display');
+    if (volumeDisplay) {
+        volumeDisplay.textContent = Math.round(data.volume_liters || 0).toLocaleString('pt-BR');
+    }
 
-    function updateDashboard(data) {
-        console.log('Dados recebidos para atualização do dashboard:', data);
+    const distanceDisplay = document.getElementById('distance-display');
+    if (distanceDisplay) {
+        distanceDisplay.textContent = (data.distance_cm || 0).toFixed(1);
+    }
 
-        // Check if data is valid and contains tank1 information
-        if (data && data.tank_id === 'tank1') {
-            const percentage = parseFloat(data.level_percentage);
-            const volume = parseFloat(data.volume_liters);
-            const distance = parseFloat(data.distance_cm);
-            const timestamp = data.timestamp;
-            const status = data.status;
-            const alertLow = data.alert_low; // Novo campo para o alerta
+    const tankLabel = document.getElementById('tank-label');
+    if (tankLabel) {
+        tankLabel.textContent = Math.round(percentage) + '%';
+    }
 
-            // Update tank visual
-            tank1WaterFill.style.height = `${Math.min(100, Math.max(0, percentage))}%`;
-            tank1LevelPercentage.textContent = `${percentage.toFixed(1)}%`;
-            tank1LevelText.textContent = `${percentage.toFixed(1)}%`;
-            tank1VolumeLiters.textContent = `${volume.toFixed(2)} L`;
-            tank1DistanceCm.textContent = `${distance.toFixed(2)} cm`;
-            tank1Timestamp.textContent = moment(timestamp).format('DD/MM/YYYY HH:mm:ss');
+    // Update status
+    const statusText = data.status === 'online' ? 'Sistema Online' : 'Sistema Offline';
+    const statusTextElement = document.getElementById('status-text');
+    if (statusTextElement) {
+        statusTextElement.textContent = statusText;
+    }
 
-            // Color and alert logic
-            if (alertLow) { // Usa o estado do alerta do backend
-                tank1WaterFill.style.backgroundColor = '#dc3545'; // Red
-                tank1Alert.className = 'alert-message alert-low';
-                tank1Alert.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Nível muito baixo! Abastecer!';
-            } else if (percentage > 100) {
-                tank1WaterFill.style.backgroundColor = '#ffc107'; // Yellow
-                tank1Alert.className = 'alert-message alert-high';
-                tank1Alert.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Nível acima de 100%! Possível transbordamento ou sensor descalibrado.';
-            } else {
-                tank1WaterFill.style.backgroundColor = '#007bff'; // Blue
-                tank1Alert.className = 'alert-message';
-                tank1Alert.innerHTML = '';
-            }
+    const systemStatus = document.getElementById('system-status');
+    if (systemStatus) {
+        systemStatus.textContent = data.status === 'online' ? 'Online' : 'Offline';
+    }
 
-            // Update online/offline status
-            if (status === 'online') {
-                statusIndicator.classList.remove('status-offline');
-                statusIndicator.classList.add('status-online');
-                statusText.textContent = 'Online';
-            } else {
-                statusIndicator.classList.remove('status-online');
-                statusIndicator.classList.add('status-offline');
-                statusText.textContent = 'Offline';
-            }
+    // Update alert
+    const alertBox = document.getElementById('alert-box');
+    if (alertBox) {
+        if (data.alert_low) {
+            alertBox.classList.add('active');
         } else {
-            console.warn('Dados inválidos ou sem tank_id=tank1 para atualização do dashboard.');
-            // If data is invalid, set status to offline and show error
-            statusIndicator.classList.remove('status-online');
-            statusIndicator.classList.add('status-offline');
-            statusText.textContent = 'Offline';
-            if (document.getElementById('tank1-alert')) {
-                document.getElementById('tank1-alert').className = 'alert-message alert-error';
-                document.getElementById('tank1-alert').innerHTML = '<i class="fas fa-exclamation-circle"></i> Erro de conexão ou dados. Verifique o sensor.';
-            }
+            alertBox.classList.remove('active');
         }
     }
 
-    async function fetchLatestData() {
-        console.log('Buscando dados mais recentes...');
-        try {
-            const response = await fetch('/api/latest');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            console.log('Dados mais recentes recebidos:', data);
-            updateDashboard(data);
-        } catch (error) {
-            console.error('Erro ao buscar dados mais recentes:', error);
-            // In case of error, ensure status is offline and show error message
-            statusIndicator.classList.remove('status-online');
-            statusIndicator.classList.add('status-offline');
-            statusText.textContent = 'Offline';
-            if (document.getElementById('tank1-alert')) {
-                document.getElementById('tank1-alert').className = 'alert-message alert-error';
-                document.getElementById('tank1-alert').innerHTML = '<i class="fas fa-exclamation-circle"></i> Erro de conexão ou dados. Verifique o sensor.';
-            }
+    // Update timestamp
+    if (data.timestamp) {
+        const date = new Date(data.timestamp);
+        const formatted = date.toLocaleString('pt-BR');
+        const timestampElement = document.getElementById('timestamp');
+        if (timestampElement) {
+            timestampElement.textContent = `Última atualização: ${formatted}`;
         }
     }
 
-    async function fetchHistoryData() {
-        console.log('Buscando dados históricos...');
-        try {
-            const response = await fetch('/api/history');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const historyData = await response.json();
-            console.log('Dados históricos recebidos:', historyData);
-            updateChart(historyData);
-        } catch (error) {
-            console.error('Erro ao buscar dados históricos:', error);
+    updateStatus(true);
+}
+
+function updateStatus(online) {
+    const statusDot = document.querySelector('.status-dot');
+    if (statusDot) {
+        if (online) {
+            statusDot.style.background = 'var(--success-color)';
+        } else {
+            statusDot.style.background = 'var(--danger-color)';
         }
     }
+}
 
-    function updateChart(data) {
-        // Ajusta o formato do timestamp para o Chart.js
-        const labels = data.map(item => moment(item.timestamp, 'DD/MM HH:mm:ss').toDate());
-        const percentages = data.map(item => item.level_percentage);
-        const volumes = data.map(item => item.volume_liters);
+async function updateChart() {
+    try {
+        const response = await fetch(`${API_BASE}/api/history`);
+        const history = await response.json();
 
-        if (tank1Chart) {
-            tank1Chart.destroy();
-        }
+        if (!history || history.length === 0) return;
 
-        const ctx = document.getElementById('tank1Chart').getContext('2d');
-        tank1Chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Nível (%)',
-                        data: percentages,
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        fill: true,
-                        tension: 0.4,
-                        yAxisID: 'y'
-                    },
-                    {
-                        label: 'Volume (L)',
-                        data: volumes,
-                        borderColor: 'rgba(153, 102, 255, 1)',
-                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                        fill: true,
-                        tension: 0.4,
-                        yAxisID: 'y1'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            unit: 'hour',
-                            displayFormats: {
-                                hour: 'DD/MM HH:mm'
-                            },
-                            tooltipFormat: 'DD/MM/YYYY HH:mm:ss'
+        const labels = history.map(h => h.timestamp).reverse();
+        const percentages = history.map(h => h.level_percentage).reverse();
+        const volumes = history.map(h => h.volume_liters).reverse();
+
+        const ctx = document.getElementById('history-chart');
+        if (!ctx) return;
+
+        const ctxContext = ctx.getContext('2d');
+
+        if (chart) {
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = percentages;
+            chart.data.datasets[1].data = volumes;
+            chart.update();
+        } else {
+            chart = new Chart(ctxContext, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Nível (%)',
+                            data: percentages,
+                            borderColor: '#0066cc',
+                            backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            yAxisID: 'y',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#0066cc',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2
                         },
-                        title: {
-                            display: true,
-                            text: 'Hora'
+                        {
+                            label: 'Volume (L)',
+                            data: volumes,
+                            borderColor: '#00d4ff',
+                            backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                            tension: 0.4,
+                            fill: false,
+                            yAxisID: 'y1',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#00d4ff',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2
                         }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Nível (%)'
-                        },
-                        max: 100,
-                        position: 'left'
-                    },
-                    y1: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Volume (L)'
-                        },
-                        position: 'right',
-                        grid: {
-                            drawOnChartArea: false // Only draw grid lines for the first y-axis
-                        }
-                    }
+                    ]
                 },
-                plugins: {
-                    tooltip: {
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
                         mode: 'index',
                         intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#b0b8c1',
+                                font: { size: 12, weight: '600' },
+                                padding: 20
+                            }
+                        },
+                        filler: {
+                            propagate: true
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Nível (%)',
+                                color: '#b0b8c1',
+                                font: { size: 12, weight: '600' }
+                            },
+                            ticks: {
+                                color: '#b0b8c1',
+                                font: { size: 11 }
+                            },
+                            grid: {
+                                color: 'rgba(42, 49, 66, 0.5)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Volume (L)',
+                                color: '#b0b8c1',
+                                font: { size: 12, weight: '600' }
+                            },
+                            ticks: {
+                                color: '#b0b8c1',
+                                font: { size: 11 }
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#b0b8c1',
+                                font: { size: 11 }
+                            },
+                            grid: {
+                                color: 'rgba(42, 49, 66, 0.5)'
+                            }
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar gráfico:', error);
     }
-
-    // Initial data load and periodic updates
-    fetchLatestData();
-    fetchHistoryData();
-    setInterval(fetchLatestData, 5000); // Update every 5 seconds
-    setInterval(fetchHistoryData, 60000); // Update history every 60 seconds
-});
+}

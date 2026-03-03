@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomínio Colina dos Cedros - Monitoramento de Água</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for("static", filename="css/style.css") }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="{{ url_for("static", filename="images/logo.png") }}" alt="Logo">
+                <h1>Colina dos Cedros</h1>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="#" class="nav-item active" data-tab="dashboard"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a></li>
+                    <li><a href="#" class="nav-item" data-tab="history"><i class="fas fa-chart-line"></i> <span>Histórico</span></a></li>
+                    <li><a href="/logout" class="nav-item"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>Monitoramento de Água</h1>
+                <div class="status-area">
+                    <span id="status-indicator" class="status-offline"></span>
+                    <span id="status-text">Offline</span>
+                </div>
+            </header>
+
+            <section id="dashboard" class="tab-content active">
+                <div class="dashboard-grid">
+                    <div class="card main-tank-card">
+                        <h2>Reservatório Principal</h2>
+                        <div class="tank-display">
+                            <div class="tank-outline">
+                                <div class="water-fill" id="tank1-water-fill"></div>
+                                <span class="water-level-text" id="tank1-level-text">0%</span>
+                            </div>
+                        </div>
+                        <div class="tank-info">
+                            <p><strong>Nível:</strong> <span id="tank1-level-percentage">0%</span></p>
+                            <p><strong>Volume:</strong> <span id="tank1-volume-liters">0 L</span></p>
+                            <p><strong>Distância:</strong> <span id="tank1-distance-cm">0 cm</span></p>
+                            <p><strong>Última Atualização:</strong> <span id="tank1-timestamp">--</span></p>
+                        </div>
+                        <div class="alert-message" id="tank1-alert"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="history" class="tab-content">
+                <div class="card">
+                    <h2>Histórico de Nível e Volume</h2>
+                    <div class="chart-container">
+                        <canvas id="tank1Chart"></canvas>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="{{ url_for("static", filename="js/main.js") }}"></script>
+</body>
+</html>

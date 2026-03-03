@@ -3,71 +3,653 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Condomínio Colina dos Cedros - Monitoramento de Água</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for("static", filename="css/style.css") }}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"></script>
+    <title>Monitor de Água - Condomínio Colina dos Cedros</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #0066cc;
+            --primary-dark: #004a99;
+            --primary-light: #e6f2ff;
+            --success-color: #00b366;
+            --warning-color: #ff9900;
+            --danger-color: #ff3333;
+            --bg-dark: #0f1419;
+            --bg-darker: #0a0e13;
+            --bg-card: #1a1f2e;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b8c1;
+            --border-color: #2a3142;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        header {
+            background: rgba(10, 14, 19, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-color), #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary-color), #00d4ff);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(0, 179, 102, 0.1);
+            border: 1px solid var(--success-color);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--success-color);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success-color);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Content */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 30px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 8px 32px rgba(0, 102, 204, 0.15);
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        /* Tank Visualization */
+        .tank-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .tank-visual {
+            width: 120px;
+            height: 240px;
+            background: linear-gradient(to bottom, #1a1f2e, #0f1419);
+            border: 3px solid var(--border-color);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .tank-water {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: linear-gradient(to top, #0066cc, #00a3ff);
+            transition: height 0.5s ease;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .tank-water::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: wave 2s infinite;
+        }
+
+        @keyframes wave {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+        }
+
+        .tank-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .metric {
+            background: rgba(0, 102, 204, 0.05);
+            border: 1px solid rgba(0, 102, 204, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .metric:hover {
+            background: rgba(0, 102, 204, 0.1);
+            border-color: var(--primary-color);
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-color), #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .metric-unit {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-left: 4px;
+        }
+
+        /* Alert Box */
+        .alert-box {
+            background: rgba(255, 51, 51, 0.1);
+            border: 1px solid rgba(255, 51, 51, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 16px;
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .alert-box.active {
+            opacity: 1;
+            max-height: 100px;
+        }
+
+        .alert-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--danger-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .alert-text {
+            font-size: 13px;
+            color: var(--danger-color);
+            font-weight: 600;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        /* Full Width Cards */
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .logo {
+                font-size: 20px;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tank-visual {
+                width: 100px;
+                height: 200px;
+            }
+
+            .metric-value {
+                font-size: 24px;
+            }
+
+            .chart-container {
+                height: 250px;
+            }
+        }
+
+        /* Loading Animation */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-card) 25%, rgba(255, 255, 255, 0.05) 50%, var(--bg-card) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Timestamp */
+        .timestamp {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 12px;
+            text-align: right;
+        }
+
+        /* Info Section */
+        .info-section {
+            background: rgba(0, 102, 204, 0.05);
+            border-left: 3px solid var(--primary-color);
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .info-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <aside class="sidebar">
+    <header>
+        <div class="header-content">
             <div class="logo">
-                <img src="{{ url_for("static", filename="images/logo.png") }}" alt="Logo">
-                <h1>Colina dos Cedros</h1>
+                <div class="logo-icon">💧</div>
+                <span>Colina dos Cedros</span>
             </div>
-            <nav class="main-nav">
-                <ul>
-                    <li><a href="#" class="nav-item active" data-tab="dashboard"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a></li>
-                    <li><a href="#" class="nav-item" data-tab="history"><i class="fas fa-chart-line"></i> <span>Histórico</span></a></li>
-                    <li><a href="/logout" class="nav-item"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a></li>
-                </ul>
-            </nav>
-        </aside>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span id="status-text">Sistema Online</span>
+            </div>
+        </div>
+    </header>
 
-        <main class="main-content">
-            <header>
-                <h1>Monitoramento de Água</h1>
-                <div class="status-area">
-                    <span id="status-indicator" class="status-offline"></span>
-                    <span id="status-text">Offline</span>
-                </div>
-            </header>
-
-            <section id="dashboard" class="tab-content active">
-                <div class="dashboard-grid">
-                    <div class="card main-tank-card">
-                        <h2>Reservatório Principal</h2>
-                        <div class="tank-display">
-                            <div class="tank-outline">
-                                <div class="water-fill" id="tank1-water-fill"></div>
-                                <span class="water-level-text" id="tank1-level-text">0%</span>
-                            </div>
+    <div class="container">
+        <div class="main-grid">
+            <!-- Tank Visualization Card -->
+            <div class="card">
+                <div class="card-title">Reservatório Principal</div>
+                <div class="tank-container">
+                    <div class="tank-visual">
+                        <div class="tank-water" id="tank-water"></div>
+                        <div class="tank-label" id="tank-label">0%</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 32px; font-weight: 700; background: linear-gradient(135deg, #0066cc, #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            <span id="percentage-display">0</span>%
                         </div>
-                        <div class="tank-info">
-                            <p><strong>Nível:</strong> <span id="tank1-level-percentage">0%</span></p>
-                            <p><strong>Volume:</strong> <span id="tank1-volume-liters">0 L</span></p>
-                            <p><strong>Distância:</strong> <span id="tank1-distance-cm">0 cm</span></p>
-                            <p><strong>Última Atualização:</strong> <span id="tank1-timestamp">--</span></p>
-                        </div>
-                        <div class="alert-message" id="tank1-alert"></div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 8px;">Nível de Água</div>
                     </div>
                 </div>
-            </section>
+                <div class="alert-box" id="alert-box">
+                    <div class="alert-icon">⚠️</div>
+                    <div class="alert-text">Nível baixo detectado! Abaixo de 20%</div>
+                </div>
+                <div class="timestamp" id="timestamp">Aguardando dados...</div>
+            </div>
 
-            <section id="history" class="tab-content">
-                <div class="card">
-                    <h2>Histórico de Nível e Volume</h2>
-                    <div class="chart-container">
-                        <canvas id="tank1Chart"></canvas>
+            <!-- Metrics Card -->
+            <div class="card">
+                <div class="card-title">Métricas do Sistema</div>
+                <div class="metrics-grid">
+                    <div class="metric">
+                        <div class="metric-label">Volume</div>
+                        <div>
+                            <span class="metric-value" id="volume-display">0</span>
+                            <span class="metric-unit">L</span>
+                        </div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Capacidade</div>
+                        <div>
+                            <span class="metric-value">40</span>
+                            <span class="metric-unit">mil L</span>
+                        </div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Distância</div>
+                        <div>
+                            <span class="metric-value" id="distance-display">0</span>
+                            <span class="metric-unit">cm</span>
+                        </div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Status</div>
+                        <div style="font-size: 14px; color: var(--success-color); font-weight: 600; margin-top: 8px;">
+                            <span id="system-status">Offline</span>
+                        </div>
                     </div>
                 </div>
-            </section>
-        </main>
+                <div class="info-section">
+                    <div class="info-title">ℹ️ Informações do Tanque</div>
+                    <div>Altura: 1000cm | Diâmetro: 200cm | Capacidade: 40.000L</div>
+                </div>
+            </div>
+
+            <!-- History Chart Card -->
+            <div class="card full-width">
+                <div class="card-title">Histórico de Nível (Últimas 50 Leituras)</div>
+                <div class="chart-container">
+                    <canvas id="history-chart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <script src="{{ url_for("static", filename="js/main.js") }}"></script>
+    <script>
+        let chart = null;
+        const API_BASE = window.location.origin;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateData();
+            setInterval(updateData, 5000); // Atualizar a cada 5 segundos
+        });
+
+        async function updateData() {
+            try {
+                const response = await fetch(`${API_BASE}/api/latest`);
+                const data = await response.json();
+
+                if (data && data.level_percentage !== undefined) {
+                    updateUI(data);
+                    updateChart();
+                }
+            } catch (error) {
+                console.error('Erro ao buscar dados:', error);
+                updateStatus(false);
+            }
+        }
+
+        function updateUI(data) {
+            // Update tank visualization
+            const percentage = data.level_percentage || 0;
+            const tankWater = document.getElementById('tank-water');
+            tankWater.style.height = percentage + '%';
+
+            // Update displays
+            document.getElementById('percentage-display').textContent = Math.round(percentage);
+            document.getElementById('volume-display').textContent = Math.round(data.volume_liters || 0).toLocaleString('pt-BR');
+            document.getElementById('distance-display').textContent = (data.distance_cm || 0).toFixed(1);
+            document.getElementById('tank-label').textContent = Math.round(percentage) + '%';
+
+            // Update status
+            const statusText = data.status === 'online' ? 'Sistema Online' : 'Sistema Offline';
+            document.getElementById('status-text').textContent = statusText;
+            document.getElementById('system-status').textContent = data.status === 'online' ? 'Online' : 'Offline';
+
+            // Update alert
+            const alertBox = document.getElementById('alert-box');
+            if (data.alert_low) {
+                alertBox.classList.add('active');
+            } else {
+                alertBox.classList.remove('active');
+            }
+
+            // Update timestamp
+            if (data.timestamp) {
+                const date = new Date(data.timestamp);
+                const formatted = date.toLocaleString('pt-BR');
+                document.getElementById('timestamp').textContent = `Última atualização: ${formatted}`;
+            }
+
+            updateStatus(true);
+        }
+
+        function updateStatus(online) {
+            const statusDot = document.querySelector('.status-dot');
+            if (online) {
+                statusDot.style.background = 'var(--success-color)';
+            } else {
+                statusDot.style.background = 'var(--danger-color)';
+            }
+        }
+
+        async function updateChart() {
+            try {
+                const response = await fetch(`${API_BASE}/api/history`);
+                const history = await response.json();
+
+                if (!history || history.length === 0) return;
+
+                const labels = history.map(h => h.timestamp).reverse();
+                const percentages = history.map(h => h.level_percentage).reverse();
+                const volumes = history.map(h => h.volume_liters).reverse();
+
+                const ctx = document.getElementById('history-chart').getContext('2d');
+
+                if (chart) {
+                    chart.data.labels = labels;
+                    chart.data.datasets[0].data = percentages;
+                    chart.data.datasets[1].data = volumes;
+                    chart.update();
+                } else {
+                    chart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                {
+                                    label: 'Nível (%)',
+                                    data: percentages,
+                                    borderColor: '#0066cc',
+                                    backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                                    tension: 0.4,
+                                    fill: true,
+                                    yAxisID: 'y',
+                                    borderWidth: 2,
+                                    pointRadius: 3,
+                                    pointBackgroundColor: '#0066cc',
+                                    pointBorderColor: '#ffffff',
+                                    pointBorderWidth: 2
+                                },
+                                {
+                                    label: 'Volume (L)',
+                                    data: volumes,
+                                    borderColor: '#00d4ff',
+                                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                                    tension: 0.4,
+                                    fill: false,
+                                    yAxisID: 'y1',
+                                    borderWidth: 2,
+                                    pointRadius: 3,
+                                    pointBackgroundColor: '#00d4ff',
+                                    pointBorderColor: '#ffffff',
+                                    pointBorderWidth: 2
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                            plugins: {
+                                legend: {
+                                    labels: {
+                                        color: '#b0b8c1',
+                                        font: { size: 12, weight: '600' },
+                                        padding: 20
+                                    }
+                                },
+                                filler: {
+                                    propagate: true
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'left',
+                                    title: {
+                                        display: true,
+                                        text: 'Nível (%)',
+                                        color: '#b0b8c1',
+                                        font: { size: 12, weight: '600' }
+                                    },
+                                    ticks: {
+                                        color: '#b0b8c1',
+                                        font: { size: 11 }
+                                    },
+                                    grid: {
+                                        color: 'rgba(42, 49, 66, 0.5)'
+                                    }
+                                },
+                                y1: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'right',
+                                    title: {
+                                        display: true,
+                                        text: 'Volume (L)',
+                                        color: '#b0b8c1',
+                                        font: { size: 12, weight: '600' }
+                                    },
+                                    ticks: {
+                                        color: '#b0b8c1',
+                                        font: { size: 11 }
+                                    },
+                                    grid: {
+                                        drawOnChartArea: false
+                                    }
+                                },
+                                x: {
+                                    ticks: {
+                                        color: '#b0b8c1',
+                                        font: { size: 11 }
+                                    },
+                                    grid: {
+                                        color: 'rgba(42, 49, 66, 0.5)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao atualizar gráfico:', error);
+            }
+        }
+    </script>
 </body>
 </html>
